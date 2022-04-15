@@ -1,5 +1,15 @@
 package main
 
+import (
+	"context"
+	"github.com/jackc/pgx/v4"
+	"github.com/sirupsen/logrus"
+	"go-developer-course-diploma/internal/app/repository"
+	"go-developer-course-diploma/internal/config"
+	"log"
+	"time"
+)
+
 //
 //Main flow:
 //
@@ -51,4 +61,35 @@ package main
 //2) можно ли использовать jwtauth для аутентификации+
 //3) логгер - logrus+ (add log_level to config)
 //4) ошибки лучше описать file service/repository (пример ErrTooManyRequests = errors.New("Too Many Requests")); controller no need
-func main() {}
+func main() {
+	// load configuration
+	cfg, err := config.ReadConfig()
+	if err != nil {
+		log.Fatal("Failed to read server configuration")
+	}
+
+	// init global logger
+	logger := logrus.New()
+	logger.SetFormatter(&logrus.TextFormatter{
+		FullTimestamp:   true,
+		TimestampFormat: time.RFC3339,
+	})
+	level, err := logrus.ParseLevel(cfg.LogLevel)
+	if err != nil {
+		log.Fatal("Failed to parse log level")
+	}
+	logger.SetLevel(level)
+
+	// init db connect
+	conn, err := pgx.Connect(context.Background(), cfg.DatabaseURI)
+	if err != nil {
+		logger.Fatal(err)
+	}
+	defer conn.Close(context.Background())
+
+	// run migration
+	err = repository.DatabaseMigration(cfg.DatabaseURI, logger)
+	if err != nil {
+		logger.Fatal(err)
+	}
+}
