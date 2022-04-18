@@ -31,11 +31,11 @@ func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func (s *server) NewRouter(accrualSystemAddress string, logger *logrus.Logger) {
 	logger.Info("Create router...")
-	s.router.HandleFunc("/api/auth/register", handlers.RegisterHandler(s.storage, logger)).Methods(http.MethodPost)
-	s.router.HandleFunc("/api/auth/login", handlers.LoginHandler(s.storage, logger)).Methods(http.MethodPost)
+	s.router.HandleFunc("/api/user/register", handlers.RegisterHandler(s.storage, logger)).Methods(http.MethodPost)
+	s.router.HandleFunc("/api/user/login", handlers.LoginHandler(s.storage, logger)).Methods(http.MethodPost)
 
 	secure := s.router.NewRoute().Subrouter()
 	secure.Use(auth.Authorization)
-	secure.HandleFunc("/api/auth/orders", handlers.UploadOrder(s.storage, accrualSystemAddress, logger)).Methods(http.MethodPost)
-	secure.HandleFunc("/api/auth/orders", handlers.GetOrders(s.storage, logger)).Methods(http.MethodGet)
+	secure.HandleFunc("/api/user/orders", handlers.UploadOrder(s.storage, accrualSystemAddress, logger)).Methods(http.MethodPost)
+	secure.HandleFunc("/api/user/orders", handlers.GetOrders(s.storage, logger)).Methods(http.MethodGet)
 }
