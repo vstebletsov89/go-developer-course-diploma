@@ -7,8 +7,9 @@ import (
 )
 
 type Storage struct {
-	DB             *sql.DB
-	userRepository *UserRepository
+	DB               *sql.DB
+	userRepository   *UserRepository
+	ordersRepository *OrderRepository
 }
 
 func NewStorage(db *sql.DB) *Storage {
@@ -17,12 +18,20 @@ func NewStorage(db *sql.DB) *Storage {
 	}
 }
 
-func (s *Storage) User() storage.UserRepository {
+func (s *Storage) Users() storage.UserRepository {
 	if s.userRepository == nil {
 		s.userRepository = &UserRepository{
 			Storage: s,
 		}
 	}
-
 	return s.userRepository
+}
+
+func (s *Storage) Orders() storage.OrderRepository {
+	if s.ordersRepository == nil {
+		s.ordersRepository = &OrderRepository{
+			Storage: s,
+		}
+	}
+	return s.ordersRepository
 }

@@ -1,5 +1,6 @@
 package storage
 
 type Storage interface {
-	User() UserRepository
+	Users() UserRepository
+	Orders() OrderRepository
 }

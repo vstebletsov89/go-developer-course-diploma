@@ -1,6 +1,7 @@
-package user
+package auth
 
 import (
+	"go-developer-course-diploma/internal/app/storage"
 	"math/rand"
 	"net/http"
 	"time"
@@ -44,6 +45,14 @@ func IsValidAuthorization(r *http.Request) bool {
 		return false
 	}
 	return true
+}
+
+func GetUser(r *http.Request) (string, error) {
+	if IsValidAuthorization(r) {
+		cookie, _ := r.Cookie(cookieName)
+		return sessions[cookie.Value].Login, nil
+	}
+	return "", storage.ErrorUnauthorized
 }
 
 func generateRandomString() string {

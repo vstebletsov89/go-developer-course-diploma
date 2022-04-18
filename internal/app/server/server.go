@@ -2,7 +2,8 @@ package server
 
 import (
 	"github.com/gorilla/mux"
-	"go-developer-course-diploma/internal/app/service/user"
+	"go-developer-course-diploma/internal/app/service/auth"
+	"go-developer-course-diploma/internal/app/service/handlers"
 	"go-developer-course-diploma/internal/app/storage"
 	"net/http"
 )
@@ -26,11 +27,12 @@ func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	s.router.ServeHTTP(w, r)
 }
 
-func (s *server) NewRouter(accuralSystemAddress string) {
-	s.router.HandleFunc("/api/user/register", user.RegisterHandler(s.storage)).Methods(http.MethodPost)
-	s.router.HandleFunc("/api/user/login", user.LoginHandler(s.storage)).Methods(http.MethodPost)
+func (s *server) NewRouter(accrualSystemAddress string) {
+	s.router.HandleFunc("/api/auth/register", handlers.RegisterHandler(s.storage)).Methods(http.MethodPost)
+	s.router.HandleFunc("/api/auth/login", handlers.LoginHandler(s.storage)).Methods(http.MethodPost)
 
 	secure := s.router.NewRoute().Subrouter()
-	secure.Use(user.Authorization)
-	//TODO: add other endpoints
+	secure.Use(auth.Authorization)
+	secure.HandleFunc("/api/auth/orders", handlers.UploadOrder(s.storage, accrualSystemAddress)).Methods(http.MethodPost)
+	secure.HandleFunc("/api/auth/orders", handlers.GetOrders(s.storage)).Methods(http.MethodGet)
 }

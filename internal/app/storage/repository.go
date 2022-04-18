@@ -5,10 +5,19 @@ import (
 	"go-developer-course-diploma/internal/app/model"
 )
 
+var ErrorUnauthorized = errors.New("user is unauthorized")
 var ErrorUserAlreadyExist = errors.New("user already exist")
 var ErrorUserNotFound = errors.New("user not found")
+var ErrorOrderNotFound = errors.New("order not found")
 
 type UserRepository interface {
 	RegisterUser(*model.User) error
 	GetUser(string) (*model.User, error)
+}
+
+type OrderRepository interface {
+	UploadOrder(*model.Order) error
+	GetOrders(string) ([]*model.Order, error)
+	GetUserByOrderNumber(string) (string, error)
+	UpdateOrderStatus(*model.Order) error
 }

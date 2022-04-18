@@ -13,6 +13,15 @@ const PostgreSQLUsersTable = `CREATE TABLE IF NOT EXISTS users (
     password text NOT NULL
 );`
 
+const PostgreSQLOrdersTable = `CREATE TABLE IF NOT EXISTS orders (
+    id bigserial NOT NULL PRIMARY KEY, 
+    login text NOT NULL,
+    number text NOT NULL UNIQUE,
+    status text NOT NULL,
+    accrual int,
+    uploaded_at timestamptz NOT NULL
+);`
+
 func RunApp(cfg *Config) error {
 	db, err := connectDB(cfg.DatabaseURI)
 	if err != nil {
@@ -37,6 +46,11 @@ func connectDB(databaseURL string) (*sql.DB, error) {
 	}
 	// migration users table
 	_, err = db.Exec(PostgreSQLUsersTable)
+	if err != nil {
+		return nil, err
+	}
+	// migration orders table
+	_, err = db.Exec(PostgreSQLOrdersTable)
 	if err != nil {
 		return nil, err
 	}
