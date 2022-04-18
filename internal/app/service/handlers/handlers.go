@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/sirupsen/logrus"
 	"github.com/theplant/luhn"
 	"go-developer-course-diploma/internal/app/model"
 	"go-developer-course-diploma/internal/app/service/auth"
@@ -53,14 +54,16 @@ func getPasswordHash(u *model.User) {
 	u.Password = hex.EncodeToString([]byte(u.Password))
 }
 
-func RegisterHandler(s storage.Storage) http.HandlerFunc {
+func RegisterHandler(s storage.Storage, logger *logrus.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		logger.Debug("RegisterHandler: start")
 		var user *model.User
 		if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
 			WriteError(w, http.StatusBadRequest, err)
 			return
 		}
 
+		logger.Debug("RegisterHandler: check user data")
 		if len(user.Login) == 0 || len(user.Password) == 0 {
 			WriteError(w, http.StatusBadRequest, errors.New("login and password must NOT be empty"))
 			return
@@ -68,6 +71,7 @@ func RegisterHandler(s storage.Storage) http.HandlerFunc {
 
 		getPasswordHash(user)
 
+		logger.Debug("RegisterHandler: RegisterUser")
 		err := s.Users().RegisterUser(user)
 		if err != nil && !errors.Is(err, storage.ErrorUserAlreadyExist) {
 			WriteError(w, http.StatusInternalServerError, err)
@@ -80,22 +84,26 @@ func RegisterHandler(s storage.Storage) http.HandlerFunc {
 
 		auth.SetCookie(w, user.Login)
 		WriteResponse(w, http.StatusOK, "")
+		logger.Debug("RegisterHandler: end")
 	}
 }
 
-func LoginHandler(s storage.Storage) http.HandlerFunc {
+func LoginHandler(s storage.Storage, logger *logrus.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		logger.Debug("LoginHandler: start")
 		var user *model.User
 		if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
 			WriteError(w, http.StatusBadRequest, err)
 			return
 		}
 
+		logger.Debug("LoginHandler: check user data")
 		if len(user.Login) == 0 || len(user.Password) == 0 {
 			WriteError(w, http.StatusBadRequest, errors.New("login and password must NOT be empty"))
 			return
 		}
 
+		logger.Debug("LoginHandler: GetUser")
 		userDB, err := s.Users().GetUser(user.Login)
 		if err != nil && !errors.Is(err, storage.ErrorUserNotFound) {
 			WriteError(w, http.StatusInternalServerError, err)
@@ -108,16 +116,18 @@ func LoginHandler(s storage.Storage) http.HandlerFunc {
 
 		getPasswordHash(user)
 
+		logger.Debug("LoginHandler: user found check credentials")
 		if userDB.Login == user.Login && userDB.Password == user.Password {
 			auth.SetCookie(w, user.Login)
 			WriteResponse(w, http.StatusOK, "")
 			return
 		}
 		WriteResponse(w, http.StatusUnauthorized, "")
+		logger.Debug("LoginHandler: end")
 	}
 }
 
-func UploadOrder(s storage.Storage, accrualSystemAddress string) http.HandlerFunc {
+func UploadOrder(s storage.Storage, accrualSystemAddress string, logger *logrus.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		b, err := ioutil.ReadAll(r.Body)
 		if err != nil {
@@ -195,7 +205,7 @@ func getLoyaltyPoints(s storage.Storage, accrualSystemAddress string, orderNumbe
 	}
 }
 
-func GetOrders(s storage.Storage) http.HandlerFunc {
+func GetOrders(s storage.Storage, logger *logrus.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		user, err := auth.GetUser(r)
 		if err != nil {

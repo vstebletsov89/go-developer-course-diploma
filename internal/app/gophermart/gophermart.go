@@ -2,9 +2,12 @@ package gophermart
 
 import (
 	"database/sql"
+	"github.com/sirupsen/logrus"
 	"go-developer-course-diploma/internal/app/server"
 	"go-developer-course-diploma/internal/app/storage/psql"
+	"log"
 	"net/http"
+	"time"
 )
 
 const PostgreSQLUsersTable = `CREATE TABLE IF NOT EXISTS users (
@@ -23,28 +26,45 @@ const PostgreSQLOrdersTable = `CREATE TABLE IF NOT EXISTS orders (
 );`
 
 func RunApp(cfg *Config) error {
-	db, err := connectDB(cfg.DatabaseURI)
+	// init global logger
+	logger := logrus.New()
+	logger.SetFormatter(&logrus.TextFormatter{
+		FullTimestamp:   true,
+		TimestampFormat: time.RFC3339,
+	})
+	level, err := logrus.ParseLevel(cfg.LogLevel)
+	if err != nil {
+		log.Fatal("Failed to parse log level")
+	}
+	logger.SetLevel(level)
+
+	db, err := connectDB(cfg.DatabaseURI, logger)
 	if err != nil {
 		return err
 	}
 	defer db.Close()
 
 	storage := psql.NewStorage(db)
-	srv := server.NewServer(storage, cfg.AccrualSystemAddress)
+	srv := server.NewServer(storage, cfg.AccrualSystemAddress, logger)
 
 	return http.ListenAndServe(cfg.RunAddress, srv)
 }
 
-func connectDB(databaseURL string) (*sql.DB, error) {
+func connectDB(databaseURL string, logger *logrus.Logger) (*sql.DB, error) {
+	logger.Infof("Open DB connection...")
 	db, err := sql.Open("postgres", databaseURL)
 	if err != nil {
 		return nil, err
 	}
+
 	// test connection
+	logger.Infof("Ping connection...")
 	if err := db.Ping(); err != nil {
 		return nil, err
 	}
+
 	// migration users table
+	logger.Infof("Database migration...")
 	_, err = db.Exec(PostgreSQLUsersTable)
 	if err != nil {
 		return nil, err
@@ -54,5 +74,6 @@ func connectDB(databaseURL string) (*sql.DB, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return db, nil
 }
