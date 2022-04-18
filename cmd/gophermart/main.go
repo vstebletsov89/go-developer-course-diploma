@@ -1,10 +1,8 @@
 package main
 
 import (
-	"context"
-	"github.com/jackc/pgx/v4"
 	"github.com/sirupsen/logrus"
-	"go-developer-course-diploma/internal/app/repository"
+	repository "go-developer-course-diploma/internal/app/repository/db"
 	"go-developer-course-diploma/internal/config"
 	"log"
 	"time"
@@ -80,15 +78,15 @@ func main() {
 	}
 	logger.SetLevel(level)
 
-	// init db connect
-	conn, err := pgx.Connect(context.Background(), cfg.DatabaseURI)
+	// Connect to the database and check ping
+	db, err := repository.ConnectDB(cfg.DatabaseURI)
 	if err != nil {
 		logger.Fatal(err)
 	}
-	defer conn.Close(context.Background())
+	defer db.Close()
+	logger.Info("Test DB connection: ok")
 
-	// run migration
-	err = repository.DatabaseMigration(cfg.DatabaseURI, logger)
+	err = repository.DatabaseMigration(cfg.DatabaseURI, "file://internal/app/repository/migrations")
 	if err != nil {
 		logger.Fatal(err)
 	}

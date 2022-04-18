@@ -1,33 +1,38 @@
-CREATE TABLE IF NOT EXISTS users
-(
-    id              serial not null primary key,
-    userID          text,
-    password        text
-);
-CREATE UNIQUE INDEX IF NOT EXISTS login_ix ON users(userID);
-
-CREATE TABLE IF NOT EXISTS orders
-(
-    id              serial not null primary key,
-    userID          text,
-    orderID         text,
-    status          text,
-    accrual         numeric,
-    uploaded_at     TIMESTAMP
+CREATE TYPE order_status AS ENUM (
+    'REGISTERED',
+    'INVALID',
+    'PROCESSING',
+    'PROCESSED'
 );
 
-CREATE TABLE IF NOT EXISTS withdrawals
-(
-    id              serial not null primary key,
-    orderID         text,
-    sum             numeric,
-    processed_at    TIMESTAMP
+CREATE TABLE users (
+ id uuid    UNIQUE PRIMARY KEY,
+ login      text UNIQUE NOT NULL,
+ password   text NOT NULL,
+ balance    decimal default 0,
+ token      text,
+ created_at timestamp
 );
 
-CREATE TABLE IF NOT EXISTS balance
-(
-    id              serial not null primary key,
-    user_uid        text,
-    balance         numeric,
-    withdrawn       numeric
+CREATE TABLE orders (
+  id          text UNIQUE PRIMARY KEY NOT NULL,
+  userID      uuid,
+  status      order_status NOT NULL,
+  accrual     decimal,
+  uploaded_at timestamp
+);
+
+CREATE TABLE accruals (
+  orderID   text UNIQUE NOT NULL,
+  userID    uuid,
+  processed boolean DEFAULT false,
+  sum       decimal
+);
+
+CREATE TABLE withdrawals (
+  orderID      text UNIQUE NOT NULL,
+  userID       uuid,
+  sum          decimal,
+  status       order_status NOT NULL,
+  processed_at timestamp
 );
