@@ -1,4 +1,4 @@
-package config
+package gophermart
 
 import (
 	"flag"
@@ -29,6 +29,7 @@ func ReadConfig() (*Config, error) {
 		return nil, err
 	}
 	cfg.readCommandLineArgs()
+
 	log.Printf("%+v\n\n", cfg)
 	return &cfg, nil
 }
