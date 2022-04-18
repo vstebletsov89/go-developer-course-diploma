@@ -127,16 +127,13 @@ func UploadOrder(s storage.Storage, accrualSystemAddress string) http.HandlerFun
 
 		number := string(b)
 
-		if err != nil || !IsValidOrderNumber(number) {
+		if !IsValidOrderNumber(number) {
 			WriteResponse(w, http.StatusUnprocessableEntity, "")
 			return
 		}
 
 		user, err := auth.GetUser(r)
 		if err != nil {
-			if errors.Is(err, storage.ErrorUnauthorized) {
-				WriteError(w, http.StatusUnauthorized, err)
-			}
 			WriteError(w, http.StatusInternalServerError, err)
 			return
 		}
@@ -202,9 +199,6 @@ func GetOrders(s storage.Storage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		user, err := auth.GetUser(r)
 		if err != nil {
-			if errors.Is(err, storage.ErrorUnauthorized) {
-				WriteError(w, http.StatusUnauthorized, err)
-			}
 			WriteError(w, http.StatusInternalServerError, err)
 			return
 		}
