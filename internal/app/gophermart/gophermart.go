@@ -25,7 +25,7 @@ const PostgreSQLOrdersTable = `CREATE TABLE IF NOT EXISTS orders (
     login text NOT NULL,
     number text NOT NULL UNIQUE,
     status text NOT NULL,
-    accrual int,
+    accrual int DEFAULT 0,
     uploaded_at timestamptz NOT NULL
 );`
 
