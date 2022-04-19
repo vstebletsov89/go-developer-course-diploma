@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"go-developer-course-diploma/internal/app/model"
 	"go-developer-course-diploma/internal/app/storage"
+	"log"
 )
 
 type OrderRepository struct {
@@ -74,7 +75,7 @@ func (r *OrderRepository) GetPendingOrders() ([]string, error) {
 
 func (r *OrderRepository) GetOrders(login string) ([]*model.Order, error) {
 	var orders []*model.Order
-
+	log.Println("GetOrders repository...")
 	rows, err := r.Storage.DB.Query(
 		"SELECT number, status, accrual, uploaded_at FROM orders WHERE login = $1 ORDER BY uploaded_at",
 		login,
@@ -94,8 +95,11 @@ func (r *OrderRepository) GetOrders(login string) ([]*model.Order, error) {
 		if err != nil {
 			return nil, err
 		}
+		log.Printf("%+v\n\n", o)
 		orders = append(orders, o)
 	}
+
+	log.Printf("%+v\n\n", orders)
 
 	if err := rows.Err(); err != nil {
 		return nil, err
