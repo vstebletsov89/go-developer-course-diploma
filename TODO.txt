@@ -1,6 +1,7 @@
-1) add unit tests for all handlers (mocking?)
-2) add worker pool and poll accrual system (retry attempts?)
-3) refactoring: remove extra initialization for storage
-4) add all endpoints
-5) add docker for internal dependencies
-6) add makefile?
+1) implement missed endpoints (withdraw)
+2) remove extra debug messages when all tests passed (simple log msgs remove!)
+3) refactoring: remove extra initialization for storage (extra layer)
+4) add unit tests for all handlers (mocking?)
+5) try to use native migration
+6) add docker for external dependencies
+7) add makefile
