@@ -173,11 +173,6 @@ func (c *Controller) UploadOrder() http.HandlerFunc {
 				return
 			}
 
-			if err := c.Storage.Orders().UpdateOrderStatus(order); err != nil {
-				WriteError(w, http.StatusInternalServerError, err)
-				return
-			}
-
 			// try to get loyalty points in goroutine
 			var numbers []string
 			go c.UpdatePendingOrders(append(numbers, number))
