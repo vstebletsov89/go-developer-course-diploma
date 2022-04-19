@@ -20,9 +20,9 @@ import (
 const (
 	ContentType      = "Content-Type"
 	ContentValueJSON = "application/json"
-	REGISTERED       = "REGISTERED"
-	INVALID          = "INVALID"
+	NEW              = "NEW"
 	PROCESSING       = "PROCESSING"
+	INVALID          = "INVALID"
 	PROCESSED        = "PROCESSED"
 )
 
@@ -161,10 +161,10 @@ func (c *Controller) UploadOrder() http.HandlerFunc {
 		if errors.Is(err, storage.ErrorOrderNotFound) {
 			order := &model.Order{
 				Number: number,
-				Status: REGISTERED,
+				Status: NEW,
 				Login:  user,
 			}
-			c.Logger.Debug("UploadOrder: REGISTERED")
+
 			err := c.Storage.Orders().UploadOrder(order)
 			if err != nil {
 				WriteError(w, http.StatusInternalServerError, err)
@@ -237,8 +237,6 @@ func (c *Controller) GetOrders() http.HandlerFunc {
 			WriteError(w, http.StatusNoContent, err)
 			return
 		}
-		c.Logger.Debug("GetOrders: write response")
-		c.Logger.Printf("Response orders JSON: %+v", response)
 
 		buf := bytes.NewBuffer([]byte{})
 		encoder := json.NewEncoder(buf)
