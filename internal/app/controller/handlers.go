@@ -189,6 +189,7 @@ func (c *Controller) UploadOrder() http.HandlerFunc {
 }
 
 func (c *Controller) UpdatePendingOrders(orders []string) error {
+	c.Logger.Debug("UpdatePendingOrders: start")
 	for _, o := range orders {
 		link := fmt.Sprintf("%s/api/orders/%s", c.Config.AccrualSystemAddress, o)
 		req, err := http.NewRequest(http.MethodGet, link, nil)
@@ -213,6 +214,7 @@ func (c *Controller) UpdatePendingOrders(orders []string) error {
 			return err
 		}
 	}
+	c.Logger.Debug("UpdatePendingOrders: end")
 	return nil
 }
 

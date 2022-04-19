@@ -19,13 +19,14 @@ func UpdatePendingOrders(controller *controller.Controller, ctx context.Context)
 			controller.Logger.Debug("Check pending orders")
 			orders, err := controller.Storage.Orders().GetPendingOrders()
 			if err != nil {
-				controller.Logger.Debug("GetPendingOrders failed")
 				controller.Logger.Debugf("GetPendingOrders error: %s", err)
 			}
 			if len(orders) > 0 {
-				controller.Logger.Debugf("Pending orders: %+v\n", orders)
 				controller.Logger.Debug("Update pending orders")
-				controller.UpdatePendingOrders(orders)
+				err := controller.UpdatePendingOrders(orders)
+				if err != nil {
+					controller.Logger.Debugf("UpdatePendingOrders error: %s", err)
+				}
 			}
 		}
 	}
