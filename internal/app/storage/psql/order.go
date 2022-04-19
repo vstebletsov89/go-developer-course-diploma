@@ -44,6 +44,34 @@ func (r *OrderRepository) GetUserByOrderNumber(number string) (string, error) {
 	return *user, nil
 }
 
+func (r *OrderRepository) GetPendingOrders() ([]string, error) {
+	var orders []string
+
+	rows, err := r.Storage.DB.Query(
+		"SELECT number FROM orders WHERE status = 'PROCESSING' ORDER BY uploaded_at",
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	for rows.Next() {
+		var number *string
+		err := rows.Scan(
+			&number,
+		)
+		if err != nil {
+			return nil, err
+		}
+		orders = append(orders, *number)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return orders, nil
+}
+
 func (r *OrderRepository) GetOrders(login string) ([]*model.Order, error) {
 	var orders []*model.Order
 

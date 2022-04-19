@@ -1,8 +1,10 @@
 package gophermart
 
 import (
+	"context"
 	"database/sql"
 	"github.com/sirupsen/logrus"
+	"go-developer-course-diploma/internal/app/accrual"
 	"go-developer-course-diploma/internal/app/configs"
 	"go-developer-course-diploma/internal/app/controller"
 	"go-developer-course-diploma/internal/app/server"
@@ -48,8 +50,11 @@ func RunApp(cfg *configs.Config) error {
 
 	s := psql.NewStorage(db)
 	c := controller.NewController(cfg, s, logger)
-	srv := server.NewServer(c)
 
+	// check pending orders
+	go accrual.UpdatePendingOrders(c, context.Background())
+
+	srv := server.NewServer(c)
 	return http.ListenAndServe(cfg.RunAddress, srv)
 }
 

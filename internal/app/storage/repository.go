@@ -20,4 +20,5 @@ type OrderRepository interface {
 	GetOrders(string) ([]*model.Order, error)
 	GetUserByOrderNumber(string) (string, error)
 	UpdateOrderStatus(*model.Order) error
+	GetPendingOrders() ([]string, error)
 }

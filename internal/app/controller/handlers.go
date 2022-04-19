@@ -177,8 +177,10 @@ func (c *Controller) UploadOrder() http.HandlerFunc {
 				return
 			}
 
-			//TODO: add attempts to get loyalty points?
-			go getLoyaltyPoints(c.Storage, c.Config.AccrualSystemAddress, number)
+			if err := c.Storage.Orders().UpdateOrderStatus(order); err != nil {
+				WriteError(w, http.StatusInternalServerError, err)
+				return
+			}
 
 			WriteResponse(w, http.StatusAccepted, "")
 			return
@@ -193,27 +195,32 @@ func (c *Controller) UploadOrder() http.HandlerFunc {
 	}
 }
 
-func getLoyaltyPoints(s storage.Storage, accrualSystemAddress string, orderNumber string) {
-	link := fmt.Sprintf("%s/api/orders/%s", accrualSystemAddress, orderNumber)
-	req, err := http.NewRequest(http.MethodGet, link, nil)
-	if err != nil {
-		return
-	}
+func (c *Controller) UpdatePendingOrders(orders []string) error {
+	for _, o := range orders {
+		link := fmt.Sprintf("%s/api/orders/%s", c.Config.AccrualSystemAddress, o)
+		req, err := http.NewRequest(http.MethodGet, link, nil)
+		if err != nil {
+			return err
+		}
 
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return
-	}
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			return err
+		}
 
-	var order *model.Order
-	if err := json.NewDecoder(resp.Body).Decode(&order); err != nil {
-		return
-	}
-	defer resp.Body.Close()
+		var order *model.Order
+		if err := json.NewDecoder(resp.Body).Decode(&order); err != nil {
+			return err
+		}
+		defer resp.Body.Close()
 
-	if err := s.Orders().UpdateOrderStatus(order); err != nil {
-		return
+		c.Logger.Debugf("Updated order from loyalty system: %+v\n", order)
+
+		if err := c.Storage.Orders().UpdateOrderStatus(order); err != nil {
+			return err
+		}
 	}
+	return nil
 }
 
 func (c *Controller) GetOrders() http.HandlerFunc {
