@@ -59,20 +59,20 @@ func RunApp(cfg *configs.Config) error {
 }
 
 func connectDB(databaseURL string, logger *logrus.Logger) (*sql.DB, error) {
-	logger.Infof("Open DB connection...")
+	logger.Infof("Open DB connection")
 	db, err := sql.Open("postgres", databaseURL)
 	if err != nil {
 		return nil, err
 	}
 
 	// test connection
-	logger.Infof("Ping connection...")
+	logger.Infof("Ping connection")
 	if err := db.Ping(); err != nil {
 		return nil, err
 	}
 
 	// migration users table
-	logger.Infof("Database migration...")
+	logger.Infof("Database migration")
 	_, err = db.Exec(PostgreSQLUsersTable)
 	if err != nil {
 		return nil, err
@@ -83,5 +83,6 @@ func connectDB(databaseURL string, logger *logrus.Logger) (*sql.DB, error) {
 		return nil, err
 	}
 
+	logger.Infof("Database migration completed")
 	return db, nil
 }

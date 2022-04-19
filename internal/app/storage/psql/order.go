@@ -12,6 +12,9 @@ type OrderRepository struct {
 }
 
 func (r *OrderRepository) UploadOrder(o *model.Order) error {
+	log.Println("UploadOrder sql: started")
+	log.Printf("%+v\n\n", o)
+
 	err := r.Storage.DB.QueryRow(
 		"INSERT INTO orders (number, status, login, uploaded_at) VALUES ($1, $2, $3, NOW()) ON CONFLICT DO NOTHING RETURNING id",
 		o.Number,
@@ -23,6 +26,7 @@ func (r *OrderRepository) UploadOrder(o *model.Order) error {
 		return err
 	}
 
+	log.Println("UploadOrder sql: done")
 	return nil
 }
 
@@ -75,11 +79,14 @@ func (r *OrderRepository) GetPendingOrders() ([]string, error) {
 
 func (r *OrderRepository) GetOrders(login string) ([]*model.Order, error) {
 	var orders []*model.Order
-	log.Println("GetOrders repository...")
+	log.Println("GetOrders sql: started")
 	rows, err := r.Storage.DB.Query(
 		"SELECT number, status, accrual, uploaded_at FROM orders WHERE login = $1 ORDER BY uploaded_at",
 		login,
 	)
+
+	log.Printf("%+v\n\n", rows)
+
 	if err != nil {
 		return nil, err
 	}
@@ -109,10 +116,13 @@ func (r *OrderRepository) GetOrders(login string) ([]*model.Order, error) {
 		return nil, storage.ErrorOrderNotFound
 	}
 
+	log.Println("GetOrders sql: done")
 	return orders, nil
 }
 
 func (r *OrderRepository) UpdateOrderStatus(o *model.Order) error {
+	log.Println("UpdateOrderStatus sql: started")
+	log.Printf("%+v\n\n", o)
 	err := r.Storage.DB.QueryRow(
 		"UPDATE orders SET status = $1, accrual = $2 WHERE number = $3",
 		o.Status,
@@ -123,6 +133,6 @@ func (r *OrderRepository) UpdateOrderStatus(o *model.Order) error {
 	if err != nil {
 		return err
 	}
-
+	log.Println("UpdateOrderStatus sql: done")
 	return nil
 }

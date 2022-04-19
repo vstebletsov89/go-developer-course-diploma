@@ -24,7 +24,7 @@ func UpdatePendingOrders(controller *controller.Controller, ctx context.Context)
 			}
 			if len(orders) > 0 {
 				controller.Logger.Debugf("Pending orders: %+v\n", orders)
-				controller.Logger.Debug("Update pending orders...")
+				controller.Logger.Debug("Update pending orders")
 				controller.UpdatePendingOrders(orders)
 			}
 		}

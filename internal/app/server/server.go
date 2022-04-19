@@ -12,7 +12,6 @@ type server struct {
 }
 
 func NewServer(controller *controller.Controller) *server {
-	controller.Logger.Info("Create new server...")
 	s := &server{
 		router: mux.NewRouter(),
 	}
@@ -25,7 +24,7 @@ func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *server) NewRouter(controller *controller.Controller) {
-	controller.Logger.Info("Routing started...")
+	controller.Logger.Info("Routing started")
 	s.router.HandleFunc("/api/user/register", controller.RegisterHandler()).Methods(http.MethodPost)
 	s.router.HandleFunc("/api/user/login", controller.LoginHandler()).Methods(http.MethodPost)
 

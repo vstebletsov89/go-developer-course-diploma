@@ -140,6 +140,7 @@ func (c *Controller) LoginHandler() http.HandlerFunc {
 
 func (c *Controller) UploadOrder() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		c.Logger.Debug("UploadOrder: start")
 		b, err := ioutil.ReadAll(r.Body)
 		if err != nil {
 			WriteError(w, http.StatusBadRequest, err)
@@ -147,6 +148,7 @@ func (c *Controller) UploadOrder() http.HandlerFunc {
 		}
 
 		number := string(b)
+		c.Logger.Debugf("UploadOrder number: %s", number)
 
 		if !IsValidOrderNumber(number) {
 			WriteResponse(w, http.StatusUnprocessableEntity, "")
@@ -170,9 +172,14 @@ func (c *Controller) UploadOrder() http.HandlerFunc {
 				Status: REGISTERED,
 				Login:  user,
 			}
-
+			c.Logger.Debug("UploadOrder: REGISTERED")
 			err := c.Storage.Orders().UploadOrder(order)
 			if err != nil {
+				WriteError(w, http.StatusInternalServerError, err)
+				return
+			}
+
+			if err := c.Storage.Orders().UpdateOrderStatus(order); err != nil {
 				WriteError(w, http.StatusInternalServerError, err)
 				return
 			}
