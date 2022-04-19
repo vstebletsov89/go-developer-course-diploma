@@ -3,6 +3,8 @@ package gophermart
 import (
 	"database/sql"
 	"github.com/sirupsen/logrus"
+	"go-developer-course-diploma/internal/app/configs"
+	"go-developer-course-diploma/internal/app/controller"
 	"go-developer-course-diploma/internal/app/server"
 	"go-developer-course-diploma/internal/app/storage/psql"
 	"log"
@@ -25,7 +27,7 @@ const PostgreSQLOrdersTable = `CREATE TABLE IF NOT EXISTS orders (
     uploaded_at timestamptz NOT NULL
 );`
 
-func RunApp(cfg *Config) error {
+func RunApp(cfg *configs.Config) error {
 	// init global logger
 	logger := logrus.New()
 	logger.SetFormatter(&logrus.TextFormatter{
@@ -44,8 +46,9 @@ func RunApp(cfg *Config) error {
 	}
 	defer db.Close()
 
-	storage := psql.NewStorage(db)
-	srv := server.NewServer(storage, cfg.AccrualSystemAddress, logger)
+	s := psql.NewStorage(db)
+	c := controller.NewController(cfg, s, logger)
+	srv := server.NewServer(c)
 
 	return http.ListenAndServe(cfg.RunAddress, srv)
 }

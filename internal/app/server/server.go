@@ -2,26 +2,21 @@ package server
 
 import (
 	"github.com/gorilla/mux"
-	"github.com/sirupsen/logrus"
+	"go-developer-course-diploma/internal/app/controller"
 	"go-developer-course-diploma/internal/app/service/auth"
-	"go-developer-course-diploma/internal/app/service/handlers"
-	"go-developer-course-diploma/internal/app/storage"
 	"net/http"
 )
 
 type server struct {
-	router  *mux.Router
-	storage storage.Storage
+	router *mux.Router
 }
 
-func NewServer(storage storage.Storage, accrualSystemAddress string, logger *logrus.Logger) *server {
-	logger.Info("Create new server...")
+func NewServer(controller *controller.Controller) *server {
+	controller.Logger.Info("Create new server...")
 	s := &server{
-		router:  mux.NewRouter(),
-		storage: storage,
+		router: mux.NewRouter(),
 	}
-	s.NewRouter(accrualSystemAddress, logger)
-
+	s.NewRouter(controller)
 	return s
 }
 
@@ -29,13 +24,13 @@ func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	s.router.ServeHTTP(w, r)
 }
 
-func (s *server) NewRouter(accrualSystemAddress string, logger *logrus.Logger) {
-	logger.Info("Create router...")
-	s.router.HandleFunc("/api/user/register", handlers.RegisterHandler(s.storage, logger)).Methods(http.MethodPost)
-	s.router.HandleFunc("/api/user/login", handlers.LoginHandler(s.storage, logger)).Methods(http.MethodPost)
+func (s *server) NewRouter(controller *controller.Controller) {
+	controller.Logger.Info("Routing started...")
+	s.router.HandleFunc("/api/user/register", controller.RegisterHandler()).Methods(http.MethodPost)
+	s.router.HandleFunc("/api/user/login", controller.LoginHandler()).Methods(http.MethodPost)
 
 	secure := s.router.NewRoute().Subrouter()
 	secure.Use(auth.Authorization)
-	secure.HandleFunc("/api/user/orders", handlers.UploadOrder(s.storage, accrualSystemAddress, logger)).Methods(http.MethodPost)
-	secure.HandleFunc("/api/user/orders", handlers.GetOrders(s.storage, logger)).Methods(http.MethodGet)
+	secure.HandleFunc("/api/user/orders", controller.UploadOrder()).Methods(http.MethodPost)
+	secure.HandleFunc("/api/user/orders", controller.GetOrders()).Methods(http.MethodGet)
 }

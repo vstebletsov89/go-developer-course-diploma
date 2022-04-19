@@ -1,4 +1,4 @@
-package gophermart
+package configs
 
 import (
 	"flag"

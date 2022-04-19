@@ -1,0 +1,6 @@
+1) add unit tests for all handlers (mocking?)
+2) add worker pool and poll accrual system (retry attempts?)
+3) refactoring: remove extra initialization for storage
+4) add all endpoints
+5) add docker for internal dependencies
+6) add makefile?

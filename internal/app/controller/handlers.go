@@ -1,4 +1,4 @@
-package handlers
+package controller
 
 import (
 	"encoding/hex"
@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/sirupsen/logrus"
 	"github.com/theplant/luhn"
+	"go-developer-course-diploma/internal/app/configs"
 	"go-developer-course-diploma/internal/app/model"
 	"go-developer-course-diploma/internal/app/service/auth"
 	"go-developer-course-diploma/internal/app/storage"
@@ -33,7 +34,7 @@ func WriteResponse(w http.ResponseWriter, statusCode int, data string) {
 	}
 }
 
-func ReturnJSON(w http.ResponseWriter, statusCode int, body interface{}) {
+func WriteResponseJSON(w http.ResponseWriter, statusCode int, body interface{}) {
 	w.Header().Add("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(body); err != nil {
 		WriteError(w, http.StatusInternalServerError, err)
@@ -54,16 +55,26 @@ func getPasswordHash(u *model.User) {
 	u.Password = hex.EncodeToString([]byte(u.Password))
 }
 
-func RegisterHandler(s storage.Storage, logger *logrus.Logger) http.HandlerFunc {
+type Controller struct {
+	Config  *configs.Config
+	Storage storage.Storage
+	Logger  *logrus.Logger
+}
+
+func NewController(c *configs.Config, s storage.Storage, l *logrus.Logger) *Controller {
+	return &Controller{Config: c, Storage: s, Logger: l}
+}
+
+func (c *Controller) RegisterHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		logger.Debug("RegisterHandler: start")
+		c.Logger.Debug("RegisterHandler: start")
 		var user *model.User
 		if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
 			WriteError(w, http.StatusBadRequest, err)
 			return
 		}
 
-		logger.Debug("RegisterHandler: check user data")
+		c.Logger.Debug("RegisterHandler: check user data")
 		if len(user.Login) == 0 || len(user.Password) == 0 {
 			WriteError(w, http.StatusBadRequest, errors.New("login and password must NOT be empty"))
 			return
@@ -71,8 +82,8 @@ func RegisterHandler(s storage.Storage, logger *logrus.Logger) http.HandlerFunc 
 
 		getPasswordHash(user)
 
-		logger.Debug("RegisterHandler: RegisterUser")
-		err := s.Users().RegisterUser(user)
+		c.Logger.Debug("RegisterHandler: RegisterUser")
+		err := c.Storage.Users().RegisterUser(user)
 		if err != nil && !errors.Is(err, storage.ErrorUserAlreadyExist) {
 			WriteError(w, http.StatusInternalServerError, err)
 			return
@@ -84,27 +95,27 @@ func RegisterHandler(s storage.Storage, logger *logrus.Logger) http.HandlerFunc 
 
 		auth.SetCookie(w, user.Login)
 		WriteResponse(w, http.StatusOK, "")
-		logger.Debug("RegisterHandler: end")
+		c.Logger.Debug("RegisterHandler: end")
 	}
 }
 
-func LoginHandler(s storage.Storage, logger *logrus.Logger) http.HandlerFunc {
+func (c *Controller) LoginHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		logger.Debug("LoginHandler: start")
+		c.Logger.Debug("LoginHandler: start")
 		var user *model.User
 		if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
 			WriteError(w, http.StatusBadRequest, err)
 			return
 		}
 
-		logger.Debug("LoginHandler: check user data")
+		c.Logger.Debug("LoginHandler: check user data")
 		if len(user.Login) == 0 || len(user.Password) == 0 {
 			WriteError(w, http.StatusBadRequest, errors.New("login and password must NOT be empty"))
 			return
 		}
 
-		logger.Debug("LoginHandler: GetUser")
-		userDB, err := s.Users().GetUser(user.Login)
+		c.Logger.Debug("LoginHandler: GetUser")
+		userDB, err := c.Storage.Users().GetUser(user.Login)
 		if err != nil && !errors.Is(err, storage.ErrorUserNotFound) {
 			WriteError(w, http.StatusInternalServerError, err)
 			return
@@ -116,18 +127,18 @@ func LoginHandler(s storage.Storage, logger *logrus.Logger) http.HandlerFunc {
 
 		getPasswordHash(user)
 
-		logger.Debug("LoginHandler: user found check credentials")
+		c.Logger.Debug("LoginHandler: user found check credentials")
 		if userDB.Login == user.Login && userDB.Password == user.Password {
 			auth.SetCookie(w, user.Login)
 			WriteResponse(w, http.StatusOK, "")
 			return
 		}
 		WriteResponse(w, http.StatusUnauthorized, "")
-		logger.Debug("LoginHandler: end")
+		c.Logger.Debug("LoginHandler: end")
 	}
 }
 
-func UploadOrder(s storage.Storage, accrualSystemAddress string, logger *logrus.Logger) http.HandlerFunc {
+func (c *Controller) UploadOrder() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		b, err := ioutil.ReadAll(r.Body)
 		if err != nil {
@@ -148,7 +159,7 @@ func UploadOrder(s storage.Storage, accrualSystemAddress string, logger *logrus.
 			return
 		}
 
-		userDB, err := s.Orders().GetUserByOrderNumber(number)
+		userDB, err := c.Storage.Orders().GetUserByOrderNumber(number)
 		if err != nil && !errors.Is(err, storage.ErrorOrderNotFound) {
 			WriteError(w, http.StatusInternalServerError, err)
 			return
@@ -160,14 +171,14 @@ func UploadOrder(s storage.Storage, accrualSystemAddress string, logger *logrus.
 				Login:  user,
 			}
 
-			err := s.Orders().UploadOrder(order)
+			err := c.Storage.Orders().UploadOrder(order)
 			if err != nil {
 				WriteError(w, http.StatusInternalServerError, err)
 				return
 			}
 
 			//TODO: add attempts to get loyalty points?
-			go getLoyaltyPoints(s, accrualSystemAddress, number)
+			go getLoyaltyPoints(c.Storage, c.Config.AccrualSystemAddress, number)
 
 			WriteResponse(w, http.StatusAccepted, "")
 			return
@@ -205,15 +216,17 @@ func getLoyaltyPoints(s storage.Storage, accrualSystemAddress string, orderNumbe
 	}
 }
 
-func GetOrders(s storage.Storage, logger *logrus.Logger) http.HandlerFunc {
+func (c *Controller) GetOrders() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		c.Logger.Debug("GetOrders: start")
 		user, err := auth.GetUser(r)
 		if err != nil {
 			WriteError(w, http.StatusInternalServerError, err)
 			return
 		}
 
-		orders, err := s.Orders().GetOrders(user)
+		c.Logger.Debug("GetOrders: get user orders")
+		orders, err := c.Storage.Orders().GetOrders(user)
 		if err != nil && !errors.Is(err, storage.ErrorOrderNotFound) {
 			WriteError(w, http.StatusInternalServerError, err)
 			return
@@ -223,6 +236,7 @@ func GetOrders(s storage.Storage, logger *logrus.Logger) http.HandlerFunc {
 			return
 		}
 
-		ReturnJSON(w, http.StatusOK, orders)
+		c.Logger.Debugf("GetOrders response: %+v\n", orders)
+		WriteResponseJSON(w, http.StatusOK, orders)
 	}
 }

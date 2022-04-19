@@ -1,12 +1,13 @@
 package main
 
 import (
+	"go-developer-course-diploma/internal/app/configs"
 	"go-developer-course-diploma/internal/app/gophermart"
 	"log"
 )
 
 func main() {
-	cfg, err := gophermart.ReadConfig()
+	cfg, err := configs.ReadConfig()
 	if err != nil {
 		log.Fatal(err)
 	}
