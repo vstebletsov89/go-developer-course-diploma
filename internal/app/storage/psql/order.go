@@ -54,7 +54,7 @@ func (r *OrderRepository) GetPendingOrders() ([]string, error) {
 	var orders []string
 	log.Println("GetPendingOrders sql: started")
 	rows, err := r.Storage.DB.Query(
-		"SELECT number FROM orders WHERE status = ANY('NEW','PROCESSING') ORDER BY uploaded_at",
+		"SELECT number FROM orders WHERE status = 'NEW' OR status = 'PROCESSING' ORDER BY uploaded_at",
 	)
 	if err != nil {
 		return nil, err
