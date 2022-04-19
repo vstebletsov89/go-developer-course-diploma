@@ -177,10 +177,9 @@ func (c *Controller) UploadOrder() http.HandlerFunc {
 				return
 			}
 
-			if err := c.Storage.Orders().UpdateOrderStatus(order); err != nil {
-				WriteError(w, http.StatusInternalServerError, err)
-				return
-			}
+			// try to get loyalty points in goroutine
+			var numbers []string
+			go c.UpdatePendingOrders(append(numbers, number))
 
 			WriteResponse(w, http.StatusAccepted, "")
 			return
@@ -214,7 +213,7 @@ func (c *Controller) UpdatePendingOrders(orders []string) error {
 		}
 		defer resp.Body.Close()
 
-		c.Logger.Debugf("Updated order from loyalty system: %+v\n", order)
+		c.Logger.Debugf("Updated order %d : \n", order.Number)
 
 		if err := c.Storage.Orders().UpdateOrderStatus(order); err != nil {
 			return err
@@ -242,8 +241,7 @@ func (c *Controller) GetOrders() http.HandlerFunc {
 			WriteError(w, http.StatusNoContent, err)
 			return
 		}
-
-		c.Logger.Debugf("GetOrders response: %+v\n", orders)
+		c.Logger.Debug("GetOrders: write response")
 		WriteResponseJSON(w, http.StatusOK, orders)
 	}
 }
