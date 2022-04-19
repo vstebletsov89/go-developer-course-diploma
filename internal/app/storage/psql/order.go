@@ -52,7 +52,7 @@ func (r *OrderRepository) GetUserByOrderNumber(number string) (string, error) {
 
 func (r *OrderRepository) GetPendingOrders() ([]string, error) {
 	var orders []string
-
+	log.Println("GetPendingOrders sql: started")
 	rows, err := r.Storage.DB.Query(
 		"SELECT number FROM orders WHERE status = 'PROCESSING' ORDER BY uploaded_at",
 	)
@@ -75,6 +75,8 @@ func (r *OrderRepository) GetPendingOrders() ([]string, error) {
 		return nil, err
 	}
 
+	log.Println("GetPendingOrders sql: done")
+	log.Printf("%+v\n", orders)
 	return orders, nil
 }
 
@@ -86,8 +88,6 @@ func (r *OrderRepository) GetOrders(login string) ([]*model.Order, error) {
 		"SELECT number, status, accrual, uploaded_at FROM orders WHERE login = $1 ORDER BY uploaded_at",
 		login,
 	)
-
-	log.Printf("%+v\n", rows)
 
 	if err != nil {
 		return nil, err

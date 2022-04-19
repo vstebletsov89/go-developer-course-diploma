@@ -11,15 +11,15 @@ func UpdatePendingOrders(controller *controller.Controller, ctx context.Context)
 	defer cancel()
 	for {
 		select {
-
 		case <-ctx.Done():
 			return
 
 		// check pending orders each second
 		case <-time.After(1 * time.Second):
+			controller.Logger.Debug("Check pending orders")
 			orders, err := controller.Storage.Orders().GetPendingOrders()
 			if err != nil {
-				controller.Logger.Debug("UpdatePendingOrders: GetPendingOrders failed")
+				controller.Logger.Debug("GetPendingOrders failed")
 				controller.Logger.Debugf("GetPendingOrders error: %s", err)
 			}
 			if len(orders) > 0 {

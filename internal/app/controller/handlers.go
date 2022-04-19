@@ -68,7 +68,6 @@ func (c *Controller) RegisterHandler() http.HandlerFunc {
 			return
 		}
 
-		c.Logger.Debug("RegisterHandler: check user data")
 		if len(user.Login) == 0 || len(user.Password) == 0 {
 			WriteError(w, http.StatusBadRequest, errors.New("login and password must NOT be empty"))
 			return
@@ -76,7 +75,6 @@ func (c *Controller) RegisterHandler() http.HandlerFunc {
 
 		getPasswordHash(user)
 
-		c.Logger.Debug("RegisterHandler: RegisterUser")
 		err := c.Storage.Users().RegisterUser(user)
 		if err != nil && !errors.Is(err, storage.ErrorUserAlreadyExist) {
 			WriteError(w, http.StatusInternalServerError, err)
@@ -223,17 +221,19 @@ func (c *Controller) GetOrders() http.HandlerFunc {
 		c.Logger.Debug("GetOrders: start")
 		user, err := auth.GetUser(r)
 		if err != nil {
+			c.Logger.Printf("GetUser error: %s", err)
 			WriteError(w, http.StatusInternalServerError, err)
 			return
 		}
 
-		c.Logger.Debug("GetOrders: get user orders")
 		response, err := c.Storage.Orders().GetOrders(user)
 		if err != nil && !errors.Is(err, storage.ErrorOrderNotFound) {
+			c.Logger.Printf("GetOrders error: %s", err)
 			WriteError(w, http.StatusInternalServerError, err)
 			return
 		}
 		if errors.Is(err, storage.ErrorOrderNotFound) {
+			c.Logger.Printf("GetOrders error: %s", err)
 			WriteError(w, http.StatusNoContent, err)
 			return
 		}
@@ -244,7 +244,8 @@ func (c *Controller) GetOrders() http.HandlerFunc {
 		encoder := json.NewEncoder(buf)
 		err = encoder.Encode(response)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			c.Logger.Printf("GetOrders encoder: %s", err)
+			WriteError(w, http.StatusInternalServerError, err)
 			return
 		}
 		c.Logger.Printf("Encoded JSON: %s", buf.String())
@@ -254,7 +255,8 @@ func (c *Controller) GetOrders() http.HandlerFunc {
 
 		_, err = w.Write(buf.Bytes())
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			c.Logger.Printf("GetOrders response: %s", err)
+			WriteError(w, http.StatusInternalServerError, err)
 			return
 		}
 	}
