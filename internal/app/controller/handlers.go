@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"bytes"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -17,10 +18,12 @@ import (
 )
 
 const (
-	REGISTERED = "REGISTERED"
-	INVALID    = "INVALID"
-	PROCESSING = "PROCESSING"
-	PROCESSED  = "PROCESSED"
+	ContentType      = "Content-Type"
+	ContentValueJSON = "application/json"
+	REGISTERED       = "REGISTERED"
+	INVALID          = "INVALID"
+	PROCESSING       = "PROCESSING"
+	PROCESSED        = "PROCESSED"
 )
 
 func WriteError(w http.ResponseWriter, code int, err error) {
@@ -32,15 +35,6 @@ func WriteResponse(w http.ResponseWriter, statusCode int, data string) {
 	if len(data) != 0 {
 		w.Write([]byte(data))
 	}
-}
-
-func WriteResponseJSON(w http.ResponseWriter, statusCode int, body interface{}) {
-	w.Header().Add("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(body); err != nil {
-		WriteError(w, http.StatusInternalServerError, err)
-		return
-	}
-	WriteResponse(w, statusCode, "")
 }
 
 func IsValidOrderNumber(number string) bool {
@@ -239,7 +233,7 @@ func (c *Controller) GetOrders() http.HandlerFunc {
 		}
 
 		c.Logger.Debug("GetOrders: get user orders")
-		orders, err := c.Storage.Orders().GetOrders(user)
+		response, err := c.Storage.Orders().GetOrders(user)
 		if err != nil && !errors.Is(err, storage.ErrorOrderNotFound) {
 			WriteError(w, http.StatusInternalServerError, err)
 			return
@@ -249,6 +243,24 @@ func (c *Controller) GetOrders() http.HandlerFunc {
 			return
 		}
 		c.Logger.Debug("GetOrders: write response")
-		WriteResponseJSON(w, http.StatusOK, orders)
+		c.Logger.Printf("Response orders JSON: %+v", response)
+
+		buf := bytes.NewBuffer([]byte{})
+		encoder := json.NewEncoder(buf)
+		err = encoder.Encode(response)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		c.Logger.Printf("Encoded JSON: %s", buf.String())
+
+		w.Header().Set(ContentType, ContentValueJSON)
+		w.WriteHeader(http.StatusOK)
+
+		_, err = w.Write(buf.Bytes())
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 	}
 }
