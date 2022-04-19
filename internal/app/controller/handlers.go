@@ -208,6 +208,8 @@ func (c *Controller) UpdatePendingOrders(orders []string) error {
 		}
 		defer resp.Body.Close()
 
+		// set order.Number because response from accrual has 'order' field instead of 'number'
+		order.Number = o
 		c.Logger.Debugf("Updated order '%s' status '%s' accrual '%f' : \n", order.Number, order.Status, order.Accrual)
 
 		if err := c.Storage.Orders().UpdateOrderStatus(order); err != nil {
