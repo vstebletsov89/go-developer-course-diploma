@@ -208,7 +208,7 @@ func (c *Controller) UpdatePendingOrders(orders []string) error {
 		}
 		defer resp.Body.Close()
 
-		c.Logger.Debugf("Updated order '%s' status '%s' accrual '%d' : \n", order.Number, order.Status, order.Accrual)
+		c.Logger.Debugf("Updated order '%s' status '%s' accrual '%f' : \n", order.Number, order.Status, order.Accrual)
 
 		if err := c.Storage.Orders().UpdateOrderStatus(order); err != nil {
 			return err
