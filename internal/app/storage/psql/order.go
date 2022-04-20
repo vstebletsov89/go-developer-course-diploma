@@ -130,7 +130,7 @@ func (r *OrderRepository) UpdateOrderStatus(o *model.Order) error {
 		o.Number,
 	).Scan(&o.Login)
 
-	if err != nil {
+	if err != nil && err != sql.ErrNoRows {
 		return err
 	}
 	log.Println("UpdateOrderStatus sql: done")
