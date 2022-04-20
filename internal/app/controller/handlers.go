@@ -246,7 +246,7 @@ func (c *Controller) UpdatePendingOrders(orders []string) error {
 
 func (c *Controller) GetOrders() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		c.Logger.Debug("GetOrders: start")
+		c.Logger.Debug("GetOrders handler")
 		user, err := auth.GetUser(r)
 		if err != nil {
 			c.Logger.Infof("GetUser error: %s", err)
@@ -290,6 +290,7 @@ func (c *Controller) GetOrders() http.HandlerFunc {
 
 func (c *Controller) GetCurrentBalance() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		c.Logger.Debug("GetCurrentBalance handler")
 		user, err := auth.GetUser(r)
 		if err != nil {
 			WriteError(w, http.StatusInternalServerError, err)
@@ -338,6 +339,7 @@ func (c *Controller) GetCurrentBalance() http.HandlerFunc {
 
 func (c *Controller) WithdrawLoyaltyPoints() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		c.Logger.Debug("WithdrawLoyaltyPoints handler")
 		var withdraw *model.Transaction
 		if err := json.NewDecoder(r.Body).Decode(&withdraw); err != nil {
 			WriteError(w, http.StatusBadRequest, err)
@@ -386,6 +388,7 @@ func (c *Controller) WithdrawLoyaltyPoints() http.HandlerFunc {
 
 func (c *Controller) GetWithdrawals() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		c.Logger.Debug("GetWithdrawals handler")
 		user, err := auth.GetUser(r)
 		if err != nil {
 			WriteError(w, http.StatusInternalServerError, err)
