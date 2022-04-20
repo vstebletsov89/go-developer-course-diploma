@@ -10,14 +10,15 @@ type TransactionRepository struct {
 	Storage *Storage
 }
 
-func (r *TransactionRepository) Transaction(o *model.Transaction) error {
+func (r *TransactionRepository) Transaction(t *model.Transaction) error {
 	log.Print("Transaction sql: start")
+	log.Printf("%+v\n", t)
 	err := r.Storage.DB.QueryRow(
 		"INSERT INTO transactions (login, number, amount, processed_at) VALUES ($1, $2, $3, NOW()) RETURNING id",
-		o.Login,
-		o.Order,
-		o.Amount,
-	).Scan(&o.ID)
+		t.Login,
+		t.Order,
+		t.Amount,
+	).Scan(&t.ID)
 
 	if err != nil {
 		return err
@@ -44,7 +45,7 @@ func (r *TransactionRepository) GetCurrentBalance(login string) (float64, error)
 func (r *TransactionRepository) GetWithdrawnAmount(login string) (float64, error) {
 	var count *float64
 	err := r.Storage.DB.QueryRow(
-		"SELECT count(amount) from transactions where login = $1 AND amount < 0",
+		"SELECT sum(amount) from transactions where login = $1 AND amount < 0",
 		login,
 	).Scan(&count)
 
@@ -57,7 +58,6 @@ func (r *TransactionRepository) GetWithdrawnAmount(login string) (float64, error
 
 func (r *TransactionRepository) GetWithdrawals(login string) ([]*model.Transaction, error) {
 	var transactions []*model.Transaction
-
 	rows, err := r.Storage.DB.Query(
 		"SELECT order, amount, processed_at FROM transactions WHERE login = $1",
 		login,
