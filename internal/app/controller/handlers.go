@@ -19,12 +19,10 @@ import (
 )
 
 const (
-	ContentType      = "Content-Type"
-	ContentValueJSON = "application/json"
-	NEW              = "NEW"
-	PROCESSING       = "PROCESSING"
-	INVALID          = "INVALID"
-	PROCESSED        = "PROCESSED"
+	NEW        = "NEW"
+	PROCESSING = "PROCESSING"
+	INVALID    = "INVALID"
+	PROCESSED  = "PROCESSED"
 )
 
 func WriteError(w http.ResponseWriter, code int, err error) {
@@ -35,6 +33,28 @@ func WriteResponse(w http.ResponseWriter, statusCode int, data string) {
 	w.WriteHeader(statusCode)
 	if len(data) != 0 {
 		w.Write([]byte(data))
+	}
+}
+
+func WriteJSON(w http.ResponseWriter, err error, response interface{}, logger *logrus.Logger) {
+	buf := bytes.NewBuffer([]byte{})
+	encoder := json.NewEncoder(buf)
+	err = encoder.Encode(response)
+	if err != nil {
+		logger.Infof("Encoder error: %s", err)
+		WriteError(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	logger.Debugf("WriteJSON response: %s", buf.String())
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+
+	_, err = w.Write(buf.Bytes())
+	if err != nil {
+		WriteError(w, http.StatusInternalServerError, err)
+		return
 	}
 }
 
@@ -62,7 +82,6 @@ func NewController(c *configs.Config, s storage.Storage, l *logrus.Logger) *Cont
 
 func (c *Controller) RegisterHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		c.Logger.Debug("RegisterHandler: start")
 		var user *model.User
 		if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
 			WriteError(w, http.StatusBadRequest, err)
@@ -70,7 +89,7 @@ func (c *Controller) RegisterHandler() http.HandlerFunc {
 		}
 
 		if len(user.Login) == 0 || len(user.Password) == 0 {
-			WriteError(w, http.StatusBadRequest, errors.New("login and password must NOT be empty"))
+			WriteResponse(w, http.StatusBadRequest, "")
 			return
 		}
 
@@ -89,26 +108,22 @@ func (c *Controller) RegisterHandler() http.HandlerFunc {
 
 		auth.SetCookie(w, user.Login)
 		WriteResponse(w, http.StatusOK, "")
-		c.Logger.Debug("RegisterHandler: end")
 	}
 }
 
 func (c *Controller) LoginHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		c.Logger.Debug("LoginHandler: start")
 		var user *model.User
 		if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
 			WriteError(w, http.StatusBadRequest, err)
 			return
 		}
 
-		c.Logger.Debug("LoginHandler: check user data")
 		if len(user.Login) == 0 || len(user.Password) == 0 {
-			WriteError(w, http.StatusBadRequest, errors.New("login and password must NOT be empty"))
+			WriteResponse(w, http.StatusBadRequest, "")
 			return
 		}
 
-		c.Logger.Debug("LoginHandler: GetUser")
 		userDB, err := c.Storage.Users().GetUser(user.Login)
 		if err != nil && !errors.Is(err, storage.ErrorUserNotFound) {
 			c.Logger.Infof("GetUser error: %s", err)
@@ -122,14 +137,13 @@ func (c *Controller) LoginHandler() http.HandlerFunc {
 
 		getPasswordHash(user)
 
-		c.Logger.Debug("LoginHandler: user found check credentials")
 		if userDB.Login == user.Login && userDB.Password == user.Password {
 			auth.SetCookie(w, user.Login)
 			WriteResponse(w, http.StatusOK, "")
 			return
 		}
+
 		WriteResponse(w, http.StatusUnauthorized, "")
-		c.Logger.Debug("LoginHandler: end")
 	}
 }
 
@@ -162,6 +176,7 @@ func (c *Controller) UploadOrder() http.HandlerFunc {
 			WriteError(w, http.StatusInternalServerError, err)
 			return
 		}
+
 		if errors.Is(err, storage.ErrorOrderNotFound) {
 			order := &model.Order{
 				Number: number,
@@ -188,6 +203,7 @@ func (c *Controller) UploadOrder() http.HandlerFunc {
 			WriteResponse(w, http.StatusOK, "")
 			return
 		}
+
 		// process error when same order number was processed by another user
 		WriteResponse(w, http.StatusConflict, "")
 	}
@@ -240,6 +256,7 @@ func (c *Controller) UpdatePendingOrders(orders []string) error {
 			}
 		}
 	}
+
 	c.Logger.Debug("UpdatePendingOrders: end")
 	return nil
 }
@@ -266,25 +283,7 @@ func (c *Controller) GetOrders() http.HandlerFunc {
 			return
 		}
 
-		buf := bytes.NewBuffer([]byte{})
-		encoder := json.NewEncoder(buf)
-		err = encoder.Encode(response)
-		if err != nil {
-			c.Logger.Infof("GetOrders encoder: %s", err)
-			WriteError(w, http.StatusInternalServerError, err)
-			return
-		}
-		c.Logger.Debugf("Encoded JSON: %s", buf.String())
-
-		w.Header().Set(ContentType, ContentValueJSON)
-		w.WriteHeader(http.StatusOK)
-
-		_, err = w.Write(buf.Bytes())
-		if err != nil {
-			c.Logger.Infof("GetOrders response: %s", err)
-			WriteError(w, http.StatusInternalServerError, err)
-			return
-		}
+		WriteJSON(w, err, response, c.Logger)
 	}
 }
 
@@ -315,25 +314,7 @@ func (c *Controller) GetCurrentBalance() http.HandlerFunc {
 			Withdrawn: withdrawn,
 		}
 
-		buf := bytes.NewBuffer([]byte{})
-		encoder := json.NewEncoder(buf)
-		err = encoder.Encode(response)
-		if err != nil {
-			c.Logger.Infof("GetCurrentBalance encoder: %s", err)
-			WriteError(w, http.StatusInternalServerError, err)
-			return
-		}
-		c.Logger.Debugf("Encoded JSON: %s", buf.String())
-
-		w.Header().Set(ContentType, ContentValueJSON)
-		w.WriteHeader(http.StatusOK)
-
-		_, err = w.Write(buf.Bytes())
-		if err != nil {
-			c.Logger.Infof("GetCurrentBalance response: %s", err)
-			WriteError(w, http.StatusInternalServerError, err)
-			return
-		}
+		WriteJSON(w, err, response, c.Logger)
 	}
 }
 
@@ -382,6 +363,7 @@ func (c *Controller) WithdrawLoyaltyPoints() http.HandlerFunc {
 			WriteError(w, http.StatusInternalServerError, err)
 			return
 		}
+
 		WriteResponse(w, http.StatusOK, "")
 	}
 }
@@ -407,24 +389,6 @@ func (c *Controller) GetWithdrawals() http.HandlerFunc {
 			return
 		}
 
-		buf := bytes.NewBuffer([]byte{})
-		encoder := json.NewEncoder(buf)
-		err = encoder.Encode(response)
-		if err != nil {
-			c.Logger.Infof("GetWithdrawals encoder: %s", err)
-			WriteError(w, http.StatusInternalServerError, err)
-			return
-		}
-		c.Logger.Debugf("Encoded JSON: %s", buf.String())
-
-		w.Header().Set(ContentType, ContentValueJSON)
-		w.WriteHeader(http.StatusOK)
-
-		_, err = w.Write(buf.Bytes())
-		if err != nil {
-			c.Logger.Infof("GetWithdrawals response: %s", err)
-			WriteError(w, http.StatusInternalServerError, err)
-			return
-		}
+		WriteJSON(w, err, response, c.Logger)
 	}
 }
