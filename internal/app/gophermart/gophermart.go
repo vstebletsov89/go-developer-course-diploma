@@ -17,8 +17,7 @@ import (
 const PostgreSQLUsersTable = `CREATE TABLE IF NOT EXISTS users (
     id bigserial NOT NULL PRIMARY KEY, 
     login text NOT NULL UNIQUE,
-    password text NOT NULL
-);`
+    password text NOT NULL);`
 
 const PostgreSQLOrdersTable = `CREATE TABLE IF NOT EXISTS orders (
     id bigserial NOT NULL PRIMARY KEY, 
@@ -26,16 +25,14 @@ const PostgreSQLOrdersTable = `CREATE TABLE IF NOT EXISTS orders (
     number text NOT NULL UNIQUE,
     status text NOT NULL,
     accrual numeric DEFAULT 0,
-    uploaded_at timestamptz NOT NULL
-);`
+    uploaded_at timestamptz NOT NULL);`
 
 const PostgreSQLWithdrawalsTable = `CREATE TABLE IF NOT EXISTS withdrawals (
     id bigserial NOT NULL PRIMARY KEY, 
     login text NOT NULL,
-    order bigserial NOT NULL,
-    amount numeric DEFAULT 0,
-    processed_at timestamptz NOT NULL
-);`
+    number bigserial NOT NULL,
+    amount numeric,
+    processed_at timestamptz NOT NULL);`
 
 func RunApp(cfg *configs.Config) error {
 	// init global logger
@@ -92,10 +89,10 @@ func connectDB(databaseURL string, logger *logrus.Logger) (*sql.DB, error) {
 		return nil, err
 	}
 	// migration withdrawals table
-	//_, err = db.Exec(PostgreSQLWithdrawalsTable)
-	//if err != nil {
-	//	return nil, err
-	//}
+	_, err = db.Exec(PostgreSQLWithdrawalsTable)
+	if err != nil {
+		return nil, err
+	}
 
 	logger.Infof("Database migration completed")
 	return db, nil
