@@ -17,7 +17,7 @@ func UpdatePendingOrders(controller *controller.Controller, ctx context.Context)
 		// check pending orders each second
 		case <-time.After(1 * time.Second):
 			controller.Logger.Debug("Check pending orders")
-			orders, err := controller.Storage.Orders().GetPendingOrders()
+			orders, err := controller.OrderRepository.GetPendingOrders()
 			if err != nil {
 				controller.Logger.Debugf("GetPendingOrders error: %s", err)
 			}

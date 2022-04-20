@@ -2,6 +2,7 @@ package controller
 
 import (
 	"bytes"
+	"database/sql"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -12,6 +13,7 @@ import (
 	"go-developer-course-diploma/internal/app/model"
 	"go-developer-course-diploma/internal/app/service/auth"
 	"go-developer-course-diploma/internal/app/storage"
+	"go-developer-course-diploma/internal/app/storage/psql"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -71,13 +73,18 @@ func getPasswordHash(u *model.User) {
 }
 
 type Controller struct {
-	Config  *configs.Config
-	Storage storage.Storage
-	Logger  *logrus.Logger
+	Config                *configs.Config
+	Logger                *logrus.Logger
+	UserRepository        *psql.UserRepository
+	OrderRepository       *psql.OrderRepository
+	TransactionRepository *psql.TransactionRepository
 }
 
-func NewController(c *configs.Config, s storage.Storage, l *logrus.Logger) *Controller {
-	return &Controller{Config: c, Storage: s, Logger: l}
+func NewController(c *configs.Config, db *sql.DB, l *logrus.Logger) *Controller {
+	return &Controller{Config: c, Logger: l,
+		UserRepository:        &psql.UserRepository{Conn: db},
+		OrderRepository:       &psql.OrderRepository{Conn: db},
+		TransactionRepository: &psql.TransactionRepository{Conn: db}}
 }
 
 func (c *Controller) RegisterHandler() http.HandlerFunc {
@@ -95,7 +102,7 @@ func (c *Controller) RegisterHandler() http.HandlerFunc {
 
 		getPasswordHash(user)
 
-		err := c.Storage.Users().RegisterUser(user)
+		err := c.UserRepository.RegisterUser(user)
 		if err != nil && !errors.Is(err, storage.ErrorUserAlreadyExist) {
 			c.Logger.Infof("RegisterUser error: %s", err)
 			WriteError(w, http.StatusInternalServerError, err)
@@ -124,7 +131,7 @@ func (c *Controller) LoginHandler() http.HandlerFunc {
 			return
 		}
 
-		userDB, err := c.Storage.Users().GetUser(user.Login)
+		userDB, err := c.UserRepository.GetUser(user.Login)
 		if err != nil && !errors.Is(err, storage.ErrorUserNotFound) {
 			c.Logger.Infof("GetUser error: %s", err)
 			WriteError(w, http.StatusInternalServerError, err)
@@ -170,7 +177,7 @@ func (c *Controller) UploadOrder() http.HandlerFunc {
 			return
 		}
 
-		userDB, err := c.Storage.Orders().GetUserByOrderNumber(number)
+		userDB, err := c.OrderRepository.GetUserByOrderNumber(number)
 		if err != nil && !errors.Is(err, storage.ErrorOrderNotFound) {
 			c.Logger.Infof("GetUserByOrderNumber error: %s", err)
 			WriteError(w, http.StatusInternalServerError, err)
@@ -184,7 +191,7 @@ func (c *Controller) UploadOrder() http.HandlerFunc {
 				Login:  user,
 			}
 
-			err := c.Storage.Orders().UploadOrder(order)
+			err := c.OrderRepository.UploadOrder(order)
 			if err != nil {
 				c.Logger.Infof("UploadOrder error: %s", err)
 				WriteError(w, http.StatusInternalServerError, err)
@@ -234,13 +241,13 @@ func (c *Controller) UpdatePendingOrders(orders []string) error {
 			order.Number = o
 			c.Logger.Debugf("Updated order '%s' status '%s' accrual '%f' : \n", order.Number, order.Status, order.Accrual)
 
-			if err := c.Storage.Orders().UpdateOrderStatus(order); err != nil {
+			if err := c.OrderRepository.UpdateOrderStatus(order); err != nil {
 				c.Logger.Infof("UpdateOrderStatus error: %s", err)
 				return err
 			}
 
 			// get current user and accumulate balance
-			userDB, err := c.Storage.Orders().GetUserByOrderNumber(order.Number)
+			userDB, err := c.OrderRepository.GetUserByOrderNumber(order.Number)
 			if err != nil {
 				c.Logger.Infof("GetUserByOrderNumber error: %s", err)
 				return err
@@ -250,8 +257,8 @@ func (c *Controller) UpdatePendingOrders(orders []string) error {
 
 			log.Printf("%+v\n", transaction)
 
-			if err := c.Storage.Transactions().Transaction(transaction); err != nil {
-				c.Logger.Infof("Transaction error: %s", err)
+			if err := c.TransactionRepository.ExecuteTransaction(transaction); err != nil {
+				c.Logger.Infof("ExecuteTransaction error: %s", err)
 				return err
 			}
 		}
@@ -271,7 +278,7 @@ func (c *Controller) GetOrders() http.HandlerFunc {
 			return
 		}
 
-		response, err := c.Storage.Orders().GetOrders(user)
+		response, err := c.OrderRepository.GetOrders(user)
 		if err != nil && !errors.Is(err, storage.ErrorOrderNotFound) {
 			c.Logger.Infof("GetOrders error: %s", err)
 			WriteError(w, http.StatusInternalServerError, err)
@@ -296,14 +303,14 @@ func (c *Controller) GetCurrentBalance() http.HandlerFunc {
 			return
 		}
 
-		balance, err := c.Storage.Transactions().GetCurrentBalance(user)
+		balance, err := c.TransactionRepository.GetCurrentBalance(user)
 		if err != nil {
 			c.Logger.Infof("GetCurrentBalance error: %s", err)
 			WriteError(w, http.StatusInternalServerError, err)
 			return
 		}
 
-		withdrawn, err := c.Storage.Transactions().GetWithdrawnAmount(user)
+		withdrawn, err := c.TransactionRepository.GetWithdrawnAmount(user)
 		if err != nil {
 			WriteError(w, http.StatusInternalServerError, err)
 			return
@@ -343,7 +350,7 @@ func (c *Controller) WithdrawLoyaltyPoints() http.HandlerFunc {
 			return
 		}
 
-		balance, err := c.Storage.Transactions().GetCurrentBalance(user)
+		balance, err := c.TransactionRepository.GetCurrentBalance(user)
 		if err != nil {
 			c.Logger.Infof("GetCurrentBalance error: %s", err)
 			WriteError(w, http.StatusInternalServerError, err)
@@ -358,7 +365,7 @@ func (c *Controller) WithdrawLoyaltyPoints() http.HandlerFunc {
 		withdraw.Login = user
 		withdraw.Amount = -1 * withdraw.Amount
 
-		if err := c.Storage.Transactions().Transaction(withdraw); err != nil {
+		if err := c.TransactionRepository.ExecuteTransaction(withdraw); err != nil {
 			c.Logger.Infof("Withdraw error: %s", err)
 			WriteError(w, http.StatusInternalServerError, err)
 			return
@@ -377,7 +384,7 @@ func (c *Controller) GetWithdrawals() http.HandlerFunc {
 			return
 		}
 
-		response, err := c.Storage.Transactions().GetWithdrawals(user)
+		response, err := c.TransactionRepository.GetWithdrawals(user)
 		if err != nil && err != storage.ErrorWithdrawalNotFound {
 			c.Logger.Infof("GetWithdrawals error: %s", err)
 			WriteError(w, http.StatusInternalServerError, err)

@@ -8,7 +8,6 @@ import (
 	"go-developer-course-diploma/internal/app/configs"
 	"go-developer-course-diploma/internal/app/controller"
 	"go-developer-course-diploma/internal/app/server"
-	"go-developer-course-diploma/internal/app/storage/psql"
 	"log"
 	"net/http"
 	"time"
@@ -54,8 +53,7 @@ func RunApp(cfg *configs.Config) error {
 	}
 	defer db.Close()
 
-	s := psql.NewStorage(db)
-	c := controller.NewController(cfg, s, logger)
+	c := controller.NewController(cfg, db, logger)
 
 	// check pending orders
 	go accrual.UpdatePendingOrders(c, context.Background())

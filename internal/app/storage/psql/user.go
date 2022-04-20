@@ -7,11 +7,11 @@ import (
 )
 
 type UserRepository struct {
-	Storage *Storage
+	Conn *sql.DB
 }
 
 func (r *UserRepository) RegisterUser(u *model.User) error {
-	err := r.Storage.DB.QueryRow(
+	err := r.Conn.QueryRow(
 		"INSERT INTO users (login, password) VALUES ($1, $2) ON CONFLICT DO NOTHING RETURNING id",
 		u.Login,
 		u.Password,
@@ -28,7 +28,7 @@ func (r *UserRepository) RegisterUser(u *model.User) error {
 
 func (r *UserRepository) GetUser(login string) (*model.User, error) {
 	u := &model.User{}
-	err := r.Storage.DB.QueryRow(
+	err := r.Conn.QueryRow(
 		"SELECT id, login, password FROM users WHERE login = $1",
 		login,
 	).Scan(

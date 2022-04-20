@@ -25,7 +25,7 @@ type OrderRepository interface {
 }
 
 type TransactionRepository interface {
-	Transaction(transaction *model.Transaction) error
+	ExecuteTransaction(transaction *model.Transaction) error
 	GetCurrentBalance(string) (float64, error)
 	GetWithdrawnAmount(string) (float64, error)
 	GetWithdrawals(string) ([]*model.Transaction, error)

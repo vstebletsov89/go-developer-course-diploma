@@ -8,7 +8,7 @@ import (
 )
 
 type OrderRepository struct {
-	Storage *Storage
+	Conn *sql.DB
 }
 
 func (r *OrderRepository) UploadOrder(o *model.Order) error {
@@ -16,7 +16,7 @@ func (r *OrderRepository) UploadOrder(o *model.Order) error {
 	log.Printf("%+v\n", o)
 	log.Printf("UploadOrder sql login: '%s'", o.Login)
 
-	err := r.Storage.DB.QueryRow(
+	err := r.Conn.QueryRow(
 		"INSERT INTO orders (number, status, login, uploaded_at) VALUES ($1, $2, $3, NOW()) ON CONFLICT DO NOTHING RETURNING id",
 		o.Number,
 		o.Status,
@@ -33,7 +33,7 @@ func (r *OrderRepository) UploadOrder(o *model.Order) error {
 
 func (r *OrderRepository) GetUserByOrderNumber(number string) (string, error) {
 	var user *string
-	err := r.Storage.DB.QueryRow(
+	err := r.Conn.QueryRow(
 		"SELECT login FROM orders WHERE number = $1",
 		number,
 	).Scan(
@@ -53,7 +53,7 @@ func (r *OrderRepository) GetUserByOrderNumber(number string) (string, error) {
 func (r *OrderRepository) GetPendingOrders() ([]string, error) {
 	var orders []string
 	log.Println("GetPendingOrders sql: started")
-	rows, err := r.Storage.DB.Query(
+	rows, err := r.Conn.Query(
 		"SELECT number FROM orders WHERE status = 'NEW' OR status = 'PROCESSING' ORDER BY uploaded_at",
 	)
 	if err != nil {
@@ -84,7 +84,7 @@ func (r *OrderRepository) GetOrders(login string) ([]*model.Order, error) {
 	var orders []*model.Order
 	log.Println("GetOrders sql: started")
 	log.Printf("GetOrders sql login: '%s'", login)
-	rows, err := r.Storage.DB.Query(
+	rows, err := r.Conn.Query(
 		"SELECT number, status, accrual, uploaded_at FROM orders WHERE login = $1 ORDER BY uploaded_at",
 		login,
 	)
@@ -123,7 +123,7 @@ func (r *OrderRepository) GetOrders(login string) ([]*model.Order, error) {
 func (r *OrderRepository) UpdateOrderStatus(o *model.Order) error {
 	log.Println("UpdateOrderStatus sql: started")
 	log.Printf("%+v\n", o)
-	err := r.Storage.DB.QueryRow(
+	err := r.Conn.QueryRow(
 		"UPDATE orders SET status = $1, accrual = $2 WHERE number = $3",
 		o.Status,
 		o.Accrual,
