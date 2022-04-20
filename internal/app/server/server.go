@@ -32,7 +32,7 @@ func (s *server) NewRouter(controller *controller.Controller) {
 	secure.Use(auth.Authorization)
 	secure.HandleFunc("/api/user/orders", controller.UploadOrder()).Methods(http.MethodPost)
 	secure.HandleFunc("/api/user/orders", controller.GetOrders()).Methods(http.MethodGet)
-	//secure.HandleFunc("/api/user/balance", controller.GetCurrentBalance()).Methods(http.MethodGet)
-	//secure.HandleFunc("/api/user/balance/withdraw", controller.WithdrawLoyaltyPoints()).Methods(http.MethodPost)
-	//secure.HandleFunc("/api/user/balance/withdrawals", controller.GetWithdrawals()).Methods(http.MethodGet)
+	secure.HandleFunc("/api/user/balance", controller.GetCurrentBalance()).Methods(http.MethodGet)
+	secure.HandleFunc("/api/user/balance/withdraw", controller.WithdrawLoyaltyPoints()).Methods(http.MethodPost)
+	secure.HandleFunc("/api/user/balance/withdrawals", controller.GetWithdrawals()).Methods(http.MethodGet)
 }

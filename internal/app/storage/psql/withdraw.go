@@ -11,7 +11,7 @@ type WithdrawRepository struct {
 
 func (r *WithdrawRepository) Withdraw(o *model.Withdraw) error {
 	err := r.Storage.DB.QueryRow(
-		"INSERT INTO withdrawals (login, order, amount, processed_at) VALUES ($1, $2, $3, NOW()) RETURNING id",
+		"INSERT INTO withdrawals (login, number, amount, processed_at) VALUES ($1, $2, $3, NOW()) RETURNING id",
 		o.Login,
 		o.Order,
 		o.Amount,
