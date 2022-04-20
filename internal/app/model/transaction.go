@@ -2,7 +2,7 @@ package model
 
 import "time"
 
-type Withdraw struct {
+type Transaction struct {
 	ID          int       `json:"-"`
 	Login       string    `json:"-"`
 	Order       string    `json:"order"`

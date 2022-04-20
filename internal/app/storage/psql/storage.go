@@ -7,10 +7,10 @@ import (
 )
 
 type Storage struct {
-	DB                 *sql.DB
-	userRepository     *UserRepository
-	ordersRepository   *OrderRepository
-	withdrawRepository *WithdrawRepository
+	DB                    *sql.DB
+	userRepository        *UserRepository
+	ordersRepository      *OrderRepository
+	transactionRepository *TransactionRepository
 }
 
 func NewStorage(db *sql.DB) *Storage {
@@ -37,11 +37,11 @@ func (s *Storage) Orders() storage.OrderRepository {
 	return s.ordersRepository
 }
 
-func (s *Storage) Withdrawals() storage.WithdrawRepository {
-	if s.withdrawRepository == nil {
-		s.withdrawRepository = &WithdrawRepository{
+func (s *Storage) Transactions() storage.TransactionRepository {
+	if s.transactionRepository == nil {
+		s.transactionRepository = &TransactionRepository{
 			Storage: s,
 		}
 	}
-	return s.withdrawRepository
+	return s.transactionRepository
 }

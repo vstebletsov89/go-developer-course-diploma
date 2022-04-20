@@ -212,13 +212,28 @@ func (c *Controller) UpdatePendingOrders(orders []string) error {
 		}
 		defer resp.Body.Close()
 
-		// set order.Number because response from accrual has 'order' field instead of 'number'
-		order.Number = o
-		c.Logger.Debugf("Updated order '%s' status '%s' accrual '%f' : \n", order.Number, order.Status, order.Accrual)
+		if order.Status == PROCESSED {
+			// set order.Number because response from accrual has 'order' field instead of 'number'
+			order.Number = o
+			c.Logger.Debugf("Updated order '%s' status '%s' accrual '%f' : \n", order.Number, order.Status, order.Accrual)
 
-		if err := c.Storage.Orders().UpdateOrderStatus(order); err != nil {
-			c.Logger.Infof("UpdateOrderStatus error: %s", err)
-			return err
+			if err := c.Storage.Orders().UpdateOrderStatus(order); err != nil {
+				c.Logger.Infof("UpdateOrderStatus error: %s", err)
+				return err
+			}
+
+			// get current user and accumulate balance
+			userDB, err := c.Storage.Orders().GetUserByOrderNumber(order.Number)
+			if err != nil {
+				c.Logger.Infof("GetUserByOrderNumber error: %s", err)
+				return err
+			}
+
+			transaction := &model.Transaction{Login: userDB, Order: order.Number, Amount: order.Accrual}
+			if err := c.Storage.Transactions().Transaction(transaction); err != nil {
+				c.Logger.Infof("Transaction error: %s", err)
+				return err
+			}
 		}
 	}
 	c.Logger.Debug("UpdatePendingOrders: end")
@@ -277,14 +292,14 @@ func (c *Controller) GetCurrentBalance() http.HandlerFunc {
 			return
 		}
 
-		balance, err := c.Storage.Withdrawals().GetCurrentBalance(user)
+		balance, err := c.Storage.Transactions().GetCurrentBalance(user)
 		if err != nil {
 			c.Logger.Infof("GetCurrentBalance error: %s", err)
 			WriteError(w, http.StatusInternalServerError, err)
 			return
 		}
 
-		withdrawn, err := c.Storage.Withdrawals().GetWithdrawnAmount(user)
+		withdrawn, err := c.Storage.Transactions().GetWithdrawnAmount(user)
 		if err != nil {
 			WriteError(w, http.StatusInternalServerError, err)
 			return
@@ -319,7 +334,7 @@ func (c *Controller) GetCurrentBalance() http.HandlerFunc {
 
 func (c *Controller) WithdrawLoyaltyPoints() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		var withdraw *model.Withdraw
+		var withdraw *model.Transaction
 		if err := json.NewDecoder(r.Body).Decode(&withdraw); err != nil {
 			WriteError(w, http.StatusBadRequest, err)
 			return
@@ -341,7 +356,7 @@ func (c *Controller) WithdrawLoyaltyPoints() http.HandlerFunc {
 			return
 		}
 
-		balance, err := c.Storage.Withdrawals().GetCurrentBalance(user)
+		balance, err := c.Storage.Transactions().GetCurrentBalance(user)
 		if err != nil {
 			c.Logger.Infof("GetCurrentBalance error: %s", err)
 			WriteError(w, http.StatusInternalServerError, err)
@@ -356,7 +371,7 @@ func (c *Controller) WithdrawLoyaltyPoints() http.HandlerFunc {
 		withdraw.Login = user
 		withdraw.Amount = -1 * withdraw.Amount
 
-		if err := c.Storage.Withdrawals().Withdraw(withdraw); err != nil {
+		if err := c.Storage.Transactions().Transaction(withdraw); err != nil {
 			c.Logger.Infof("Withdraw error: %s", err)
 			WriteError(w, http.StatusInternalServerError, err)
 			return
@@ -373,7 +388,7 @@ func (c *Controller) GetWithdrawals() http.HandlerFunc {
 			return
 		}
 
-		response, err := c.Storage.Withdrawals().GetWithdrawals(user)
+		response, err := c.Storage.Transactions().GetWithdrawals(user)
 		if err != nil && err != storage.ErrorWithdrawalNotFound {
 			c.Logger.Infof("GetWithdrawals error: %s", err)
 			WriteError(w, http.StatusInternalServerError, err)

@@ -27,7 +27,7 @@ const PostgreSQLOrdersTable = `CREATE TABLE IF NOT EXISTS orders (
     accrual numeric DEFAULT 0,
     uploaded_at timestamptz NOT NULL);`
 
-const PostgreSQLWithdrawalsTable = `CREATE TABLE IF NOT EXISTS withdrawals (
+const PostgreSQLWithdrawalsTable = `CREATE TABLE IF NOT EXISTS transactions (
     id bigserial NOT NULL PRIMARY KEY, 
     login text NOT NULL,
     number bigserial NOT NULL,

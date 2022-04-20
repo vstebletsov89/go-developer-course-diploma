@@ -24,9 +24,9 @@ type OrderRepository interface {
 	GetPendingOrders() ([]string, error)
 }
 
-type WithdrawRepository interface {
-	Withdraw(*model.Withdraw) error
+type TransactionRepository interface {
+	Transaction(transaction *model.Transaction) error
 	GetCurrentBalance(string) (float64, error)
 	GetWithdrawnAmount(string) (float64, error)
-	GetWithdrawals(string) ([]*model.Withdraw, error)
+	GetWithdrawals(string) ([]*model.Transaction, error)
 }
