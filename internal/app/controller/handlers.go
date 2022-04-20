@@ -36,10 +36,10 @@ func WriteResponse(w http.ResponseWriter, statusCode int, data string) {
 	}
 }
 
-func WriteJSON(w http.ResponseWriter, err error, response interface{}, logger *logrus.Logger) {
+func WriteJSON(w http.ResponseWriter, response interface{}, logger *logrus.Logger) {
 	buf := bytes.NewBuffer([]byte{})
 	encoder := json.NewEncoder(buf)
-	err = encoder.Encode(response)
+	err := encoder.Encode(response)
 	if err != nil {
 		logger.Infof("Encoder error: %s", err)
 		WriteError(w, http.StatusInternalServerError, err)
@@ -283,7 +283,7 @@ func (c *Controller) GetOrders() http.HandlerFunc {
 			return
 		}
 
-		WriteJSON(w, err, response, c.Logger)
+		WriteJSON(w, response, c.Logger)
 	}
 }
 
@@ -314,7 +314,7 @@ func (c *Controller) GetCurrentBalance() http.HandlerFunc {
 			Withdrawn: withdrawn,
 		}
 
-		WriteJSON(w, err, response, c.Logger)
+		WriteJSON(w, response, c.Logger)
 	}
 }
 
@@ -389,6 +389,6 @@ func (c *Controller) GetWithdrawals() http.HandlerFunc {
 			return
 		}
 
-		WriteJSON(w, err, response, c.Logger)
+		WriteJSON(w, response, c.Logger)
 	}
 }
