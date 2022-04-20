@@ -128,7 +128,7 @@ func (r *OrderRepository) UpdateOrderStatus(o *model.Order) error {
 		o.Status,
 		o.Accrual,
 		o.Number,
-	).Scan(&o.Login)
+	).Scan(&o.ID)
 
 	if err != nil && err != sql.ErrNoRows {
 		return err

@@ -223,8 +223,6 @@ func (c *Controller) UpdatePendingOrders(orders []string) error {
 				return err
 			}
 
-			c.Logger.Debugf("Login from update order: '%s'", order.Login)
-
 			// get current user and accumulate balance
 			userDB, err := c.Storage.Orders().GetUserByOrderNumber(order.Number)
 			if err != nil {
@@ -232,9 +230,7 @@ func (c *Controller) UpdatePendingOrders(orders []string) error {
 				return err
 			}
 
-			c.Logger.Debugf("userDB: '%s'", userDB)
-
-			transaction := &model.Transaction{Login: order.Login, Order: order.Number, Amount: order.Accrual}
+			transaction := &model.Transaction{Login: userDB, Order: order.Number, Amount: order.Accrual}
 
 			log.Printf("%+v\n", transaction)
 
