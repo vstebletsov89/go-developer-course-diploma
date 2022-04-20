@@ -30,6 +30,7 @@ func (r *TransactionRepository) Transaction(t *model.Transaction) error {
 func (r *TransactionRepository) GetCurrentBalance(login string) (float64, error) {
 	var balance *float64
 	log.Print("GetCurrentBalance sql start")
+	log.Printf("Login '%s'", login)
 	err := r.Storage.DB.QueryRow(
 		"SELECT sum(amount) from transactions where login = $1",
 		login,
