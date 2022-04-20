@@ -13,6 +13,7 @@ import (
 	"go-developer-course-diploma/internal/app/service/auth"
 	"go-developer-course-diploma/internal/app/storage"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"strconv"
 )
@@ -222,6 +223,8 @@ func (c *Controller) UpdatePendingOrders(orders []string) error {
 				return err
 			}
 
+			c.Logger.Debugf("Login from update order: '%s'", order.Login)
+
 			// get current user and accumulate balance
 			userDB, err := c.Storage.Orders().GetUserByOrderNumber(order.Number)
 			if err != nil {
@@ -229,7 +232,12 @@ func (c *Controller) UpdatePendingOrders(orders []string) error {
 				return err
 			}
 
-			transaction := &model.Transaction{Login: userDB, Order: order.Number, Amount: order.Accrual}
+			c.Logger.Debugf("userDB: '%s'", userDB)
+
+			transaction := &model.Transaction{Login: order.Login, Order: order.Number, Amount: order.Accrual}
+
+			log.Printf("%+v\n", transaction)
+
 			if err := c.Storage.Transactions().Transaction(transaction); err != nil {
 				c.Logger.Infof("Transaction error: %s", err)
 				return err

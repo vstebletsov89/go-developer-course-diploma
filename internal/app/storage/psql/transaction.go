@@ -11,6 +11,7 @@ type TransactionRepository struct {
 }
 
 func (r *TransactionRepository) Transaction(o *model.Transaction) error {
+	log.Print("Transaction sql: start")
 	err := r.Storage.DB.QueryRow(
 		"INSERT INTO transactions (login, number, amount, processed_at) VALUES ($1, $2, $3, NOW()) RETURNING id",
 		o.Login,
@@ -21,7 +22,7 @@ func (r *TransactionRepository) Transaction(o *model.Transaction) error {
 	if err != nil {
 		return err
 	}
-
+	log.Print("Transaction sql: end")
 	return nil
 }
 
