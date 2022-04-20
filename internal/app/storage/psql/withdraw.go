@@ -27,7 +27,7 @@ func (r *WithdrawRepository) Withdraw(o *model.Withdraw) error {
 func (r *WithdrawRepository) GetCurrentBalance(login string) (float64, error) {
 	var balance *float64
 	err := r.Storage.DB.QueryRow(
-		"SELECT sum(amount) from withdrawals where owner = $1",
+		"SELECT sum(amount) from withdrawals where login = $1",
 		login,
 	).Scan(&balance)
 
@@ -41,7 +41,7 @@ func (r *WithdrawRepository) GetCurrentBalance(login string) (float64, error) {
 func (r *WithdrawRepository) GetWithdrawnAmount(login string) (float64, error) {
 	var count *float64
 	err := r.Storage.DB.QueryRow(
-		"SELECT count(amount) from withdrawals where owner = $1 AND amount < 0",
+		"SELECT count(amount) from withdrawals where login = $1 AND amount < 0",
 		login,
 	).Scan(&count)
 
@@ -56,7 +56,7 @@ func (r *WithdrawRepository) GetWithdrawals(login string) ([]*model.Withdraw, er
 	var withdrawals []*model.Withdraw
 
 	rows, err := r.Storage.DB.Query(
-		"SELECT order, amount, processed_at FROM withdrawals WHERE owner = $1",
+		"SELECT order, amount, processed_at FROM withdrawals WHERE login = $1",
 		login,
 	)
 	if err != nil {
