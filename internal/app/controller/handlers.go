@@ -255,7 +255,7 @@ func (c *Controller) GetOrders() http.HandlerFunc {
 			WriteError(w, http.StatusInternalServerError, err)
 			return
 		}
-		c.Logger.Debug("Encoded JSON: %s", buf.String())
+		c.Logger.Debugf("Encoded JSON: %s", buf.String())
 
 		w.Header().Set(ContentType, ContentValueJSON)
 		w.WriteHeader(http.StatusOK)
@@ -393,7 +393,7 @@ func (c *Controller) GetWithdrawals() http.HandlerFunc {
 			WriteError(w, http.StatusInternalServerError, err)
 			return
 		}
-		c.Logger.Debug("Encoded JSON: %s", buf.String())
+		c.Logger.Debugf("Encoded JSON: %s", buf.String())
 
 		w.Header().Set(ContentType, ContentValueJSON)
 		w.WriteHeader(http.StatusOK)
