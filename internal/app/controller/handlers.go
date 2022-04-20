@@ -77,6 +77,7 @@ func (c *Controller) RegisterHandler() http.HandlerFunc {
 
 		err := c.Storage.Users().RegisterUser(user)
 		if err != nil && !errors.Is(err, storage.ErrorUserAlreadyExist) {
+			c.Logger.Infof("RegisterUser error: %s", err)
 			WriteError(w, http.StatusInternalServerError, err)
 			return
 		}
@@ -109,6 +110,7 @@ func (c *Controller) LoginHandler() http.HandlerFunc {
 		c.Logger.Debug("LoginHandler: GetUser")
 		userDB, err := c.Storage.Users().GetUser(user.Login)
 		if err != nil && !errors.Is(err, storage.ErrorUserNotFound) {
+			c.Logger.Infof("GetUser error: %s", err)
 			WriteError(w, http.StatusInternalServerError, err)
 			return
 		}
@@ -155,6 +157,7 @@ func (c *Controller) UploadOrder() http.HandlerFunc {
 
 		userDB, err := c.Storage.Orders().GetUserByOrderNumber(number)
 		if err != nil && !errors.Is(err, storage.ErrorOrderNotFound) {
+			c.Logger.Infof("GetUserByOrderNumber error: %s", err)
 			WriteError(w, http.StatusInternalServerError, err)
 			return
 		}
@@ -167,6 +170,7 @@ func (c *Controller) UploadOrder() http.HandlerFunc {
 
 			err := c.Storage.Orders().UploadOrder(order)
 			if err != nil {
+				c.Logger.Infof("UploadOrder error: %s", err)
 				WriteError(w, http.StatusInternalServerError, err)
 				return
 			}
@@ -213,6 +217,7 @@ func (c *Controller) UpdatePendingOrders(orders []string) error {
 		c.Logger.Debugf("Updated order '%s' status '%s' accrual '%f' : \n", order.Number, order.Status, order.Accrual)
 
 		if err := c.Storage.Orders().UpdateOrderStatus(order); err != nil {
+			c.Logger.Infof("UpdateOrderStatus error: %s", err)
 			return err
 		}
 	}
@@ -225,19 +230,19 @@ func (c *Controller) GetOrders() http.HandlerFunc {
 		c.Logger.Debug("GetOrders: start")
 		user, err := auth.GetUser(r)
 		if err != nil {
-			c.Logger.Printf("GetUser error: %s", err)
+			c.Logger.Infof("GetUser error: %s", err)
 			WriteError(w, http.StatusInternalServerError, err)
 			return
 		}
 
 		response, err := c.Storage.Orders().GetOrders(user)
 		if err != nil && !errors.Is(err, storage.ErrorOrderNotFound) {
-			c.Logger.Printf("GetOrders error: %s", err)
+			c.Logger.Infof("GetOrders error: %s", err)
 			WriteError(w, http.StatusInternalServerError, err)
 			return
 		}
 		if errors.Is(err, storage.ErrorOrderNotFound) {
-			c.Logger.Printf("GetOrders error: %s", err)
+			c.Logger.Infof("GetOrders error: %s", err)
 			WriteError(w, http.StatusNoContent, err)
 			return
 		}
@@ -246,18 +251,156 @@ func (c *Controller) GetOrders() http.HandlerFunc {
 		encoder := json.NewEncoder(buf)
 		err = encoder.Encode(response)
 		if err != nil {
-			c.Logger.Printf("GetOrders encoder: %s", err)
+			c.Logger.Infof("GetOrders encoder: %s", err)
 			WriteError(w, http.StatusInternalServerError, err)
 			return
 		}
-		c.Logger.Printf("Encoded JSON: %s", buf.String())
+		c.Logger.Debug("Encoded JSON: %s", buf.String())
 
 		w.Header().Set(ContentType, ContentValueJSON)
 		w.WriteHeader(http.StatusOK)
 
 		_, err = w.Write(buf.Bytes())
 		if err != nil {
-			c.Logger.Printf("GetOrders response: %s", err)
+			c.Logger.Infof("GetOrders response: %s", err)
+			WriteError(w, http.StatusInternalServerError, err)
+			return
+		}
+	}
+}
+
+func (c *Controller) GetCurrentBalance() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		user, err := auth.GetUser(r)
+		if err != nil {
+			WriteError(w, http.StatusInternalServerError, err)
+			return
+		}
+
+		balance, err := c.Storage.Withdrawals().GetCurrentBalance(user)
+		if err != nil {
+			c.Logger.Infof("GetCurrentBalance error: %s", err)
+			WriteError(w, http.StatusInternalServerError, err)
+			return
+		}
+
+		withdrawn, err := c.Storage.Withdrawals().GetWithdrawnAmount(user)
+		if err != nil {
+			WriteError(w, http.StatusInternalServerError, err)
+			return
+		}
+
+		response := &model.Balance{
+			Current:   balance,
+			Withdrawn: withdrawn,
+		}
+
+		buf := bytes.NewBuffer([]byte{})
+		encoder := json.NewEncoder(buf)
+		err = encoder.Encode(response)
+		if err != nil {
+			c.Logger.Infof("GetCurrentBalance encoder: %s", err)
+			WriteError(w, http.StatusInternalServerError, err)
+			return
+		}
+		c.Logger.Debugf("Encoded JSON: %s", buf.String())
+
+		w.Header().Set(ContentType, ContentValueJSON)
+		w.WriteHeader(http.StatusOK)
+
+		_, err = w.Write(buf.Bytes())
+		if err != nil {
+			c.Logger.Infof("GetCurrentBalance response: %s", err)
+			WriteError(w, http.StatusInternalServerError, err)
+			return
+		}
+	}
+}
+
+func (c *Controller) WithdrawLoyaltyPoints() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var withdraw *model.Withdraw
+		if err := json.NewDecoder(r.Body).Decode(&withdraw); err != nil {
+			WriteError(w, http.StatusBadRequest, err)
+			return
+		}
+
+		if withdraw.Amount < 0 {
+			WriteResponse(w, http.StatusBadRequest, "")
+			return
+		}
+
+		if !IsValidOrderNumber(withdraw.Order) {
+			WriteResponse(w, http.StatusUnprocessableEntity, "")
+			return
+		}
+
+		user, err := auth.GetUser(r)
+		if err != nil {
+			WriteError(w, http.StatusInternalServerError, err)
+			return
+		}
+
+		balance, err := c.Storage.Withdrawals().GetCurrentBalance(user)
+		if err != nil {
+			c.Logger.Infof("GetCurrentBalance error: %s", err)
+			WriteError(w, http.StatusInternalServerError, err)
+			return
+		}
+
+		if balance < withdraw.Amount {
+			WriteResponse(w, http.StatusPaymentRequired, "")
+			return
+		}
+
+		withdraw.Login = user
+		withdraw.Amount = -1 * withdraw.Amount
+
+		if err := c.Storage.Withdrawals().Withdraw(withdraw); err != nil {
+			c.Logger.Infof("Withdraw error: %s", err)
+			WriteError(w, http.StatusInternalServerError, err)
+			return
+		}
+		WriteResponse(w, http.StatusOK, "")
+	}
+}
+
+func (c *Controller) GetWithdrawals() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		user, err := auth.GetUser(r)
+		if err != nil {
+			WriteError(w, http.StatusInternalServerError, err)
+			return
+		}
+
+		response, err := c.Storage.Withdrawals().GetWithdrawals(user)
+		if err != nil && err != storage.ErrorWithdrawalNotFound {
+			c.Logger.Infof("GetWithdrawals error: %s", err)
+			WriteError(w, http.StatusInternalServerError, err)
+			return
+		}
+		if err == storage.ErrorWithdrawalNotFound {
+			c.Logger.Infof("GetWithdrawals error: %s", err)
+			WriteError(w, http.StatusInternalServerError, err)
+			return
+		}
+
+		buf := bytes.NewBuffer([]byte{})
+		encoder := json.NewEncoder(buf)
+		err = encoder.Encode(response)
+		if err != nil {
+			c.Logger.Infof("GetWithdrawals encoder: %s", err)
+			WriteError(w, http.StatusInternalServerError, err)
+			return
+		}
+		c.Logger.Debug("Encoded JSON: %s", buf.String())
+
+		w.Header().Set(ContentType, ContentValueJSON)
+		w.WriteHeader(http.StatusOK)
+
+		_, err = w.Write(buf.Bytes())
+		if err != nil {
+			c.Logger.Infof("GetWithdrawals response: %s", err)
 			WriteError(w, http.StatusInternalServerError, err)
 			return
 		}

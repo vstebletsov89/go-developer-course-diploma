@@ -9,6 +9,7 @@ var ErrorUnauthorized = errors.New("user is unauthorized")
 var ErrorUserAlreadyExist = errors.New("user already exist")
 var ErrorUserNotFound = errors.New("user not found")
 var ErrorOrderNotFound = errors.New("order not found")
+var ErrorWithdrawalNotFound = errors.New("withdrawal not found")
 
 type UserRepository interface {
 	RegisterUser(*model.User) error
@@ -21,4 +22,11 @@ type OrderRepository interface {
 	GetUserByOrderNumber(string) (string, error)
 	UpdateOrderStatus(*model.Order) error
 	GetPendingOrders() ([]string, error)
+}
+
+type WithdrawRepository interface {
+	Withdraw(*model.Withdraw) error
+	GetCurrentBalance(string) (float64, error)
+	GetWithdrawnAmount(string) (float64, error)
+	GetWithdrawals(string) ([]*model.Withdraw, error)
 }

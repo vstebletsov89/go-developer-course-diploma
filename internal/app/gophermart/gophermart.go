@@ -29,6 +29,14 @@ const PostgreSQLOrdersTable = `CREATE TABLE IF NOT EXISTS orders (
     uploaded_at timestamptz NOT NULL
 );`
 
+const PostgreSQLWithdrawalsTable = `CREATE TABLE IF NOT EXISTS withdrawals (
+    id bigserial NOT NULL PRIMARY KEY, 
+    login text NOT NULL,
+    order bigserial NOT NULL,
+    amount numeric DEFAULT 0,
+    processed_at timestamptz NOT NULL
+);`
+
 func RunApp(cfg *configs.Config) error {
 	// init global logger
 	logger := logrus.New()
@@ -79,6 +87,11 @@ func connectDB(databaseURL string, logger *logrus.Logger) (*sql.DB, error) {
 	}
 	// migration orders table
 	_, err = db.Exec(PostgreSQLOrdersTable)
+	if err != nil {
+		return nil, err
+	}
+	// migration withdrawals table
+	_, err = db.Exec(PostgreSQLWithdrawalsTable)
 	if err != nil {
 		return nil, err
 	}
