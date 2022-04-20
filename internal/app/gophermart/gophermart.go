@@ -92,10 +92,10 @@ func connectDB(databaseURL string, logger *logrus.Logger) (*sql.DB, error) {
 		return nil, err
 	}
 	// migration withdrawals table
-	_, err = db.Exec(PostgreSQLWithdrawalsTable)
-	if err != nil {
-		return nil, err
-	}
+	//_, err = db.Exec(PostgreSQLWithdrawalsTable)
+	//if err != nil {
+	//	return nil, err
+	//}
 
 	logger.Infof("Database migration completed")
 	return db, nil

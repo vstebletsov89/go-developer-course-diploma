@@ -269,140 +269,140 @@ func (c *Controller) GetOrders() http.HandlerFunc {
 	}
 }
 
-func (c *Controller) GetCurrentBalance() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		user, err := auth.GetUser(r)
-		if err != nil {
-			WriteError(w, http.StatusInternalServerError, err)
-			return
-		}
-
-		balance, err := c.Storage.Withdrawals().GetCurrentBalance(user)
-		if err != nil {
-			c.Logger.Infof("GetCurrentBalance error: %s", err)
-			WriteError(w, http.StatusInternalServerError, err)
-			return
-		}
-
-		withdrawn, err := c.Storage.Withdrawals().GetWithdrawnAmount(user)
-		if err != nil {
-			WriteError(w, http.StatusInternalServerError, err)
-			return
-		}
-
-		response := &model.Balance{
-			Current:   balance,
-			Withdrawn: withdrawn,
-		}
-
-		buf := bytes.NewBuffer([]byte{})
-		encoder := json.NewEncoder(buf)
-		err = encoder.Encode(response)
-		if err != nil {
-			c.Logger.Infof("GetCurrentBalance encoder: %s", err)
-			WriteError(w, http.StatusInternalServerError, err)
-			return
-		}
-		c.Logger.Debugf("Encoded JSON: %s", buf.String())
-
-		w.Header().Set(ContentType, ContentValueJSON)
-		w.WriteHeader(http.StatusOK)
-
-		_, err = w.Write(buf.Bytes())
-		if err != nil {
-			c.Logger.Infof("GetCurrentBalance response: %s", err)
-			WriteError(w, http.StatusInternalServerError, err)
-			return
-		}
-	}
-}
-
-func (c *Controller) WithdrawLoyaltyPoints() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		var withdraw *model.Withdraw
-		if err := json.NewDecoder(r.Body).Decode(&withdraw); err != nil {
-			WriteError(w, http.StatusBadRequest, err)
-			return
-		}
-
-		if withdraw.Amount < 0 {
-			WriteResponse(w, http.StatusBadRequest, "")
-			return
-		}
-
-		if !IsValidOrderNumber(withdraw.Order) {
-			WriteResponse(w, http.StatusUnprocessableEntity, "")
-			return
-		}
-
-		user, err := auth.GetUser(r)
-		if err != nil {
-			WriteError(w, http.StatusInternalServerError, err)
-			return
-		}
-
-		balance, err := c.Storage.Withdrawals().GetCurrentBalance(user)
-		if err != nil {
-			c.Logger.Infof("GetCurrentBalance error: %s", err)
-			WriteError(w, http.StatusInternalServerError, err)
-			return
-		}
-
-		if balance < withdraw.Amount {
-			WriteResponse(w, http.StatusPaymentRequired, "")
-			return
-		}
-
-		withdraw.Login = user
-		withdraw.Amount = -1 * withdraw.Amount
-
-		if err := c.Storage.Withdrawals().Withdraw(withdraw); err != nil {
-			c.Logger.Infof("Withdraw error: %s", err)
-			WriteError(w, http.StatusInternalServerError, err)
-			return
-		}
-		WriteResponse(w, http.StatusOK, "")
-	}
-}
-
-func (c *Controller) GetWithdrawals() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		user, err := auth.GetUser(r)
-		if err != nil {
-			WriteError(w, http.StatusInternalServerError, err)
-			return
-		}
-
-		response, err := c.Storage.Withdrawals().GetWithdrawals(user)
-		if err != nil && err != storage.ErrorWithdrawalNotFound {
-			c.Logger.Infof("GetWithdrawals error: %s", err)
-			WriteError(w, http.StatusInternalServerError, err)
-			return
-		}
-		if err == storage.ErrorWithdrawalNotFound {
-			c.Logger.Infof("GetWithdrawals error: %s", err)
-			WriteError(w, http.StatusInternalServerError, err)
-			return
-		}
-
-		buf := bytes.NewBuffer([]byte{})
-		encoder := json.NewEncoder(buf)
-		err = encoder.Encode(response)
-		if err != nil {
-			c.Logger.Infof("GetWithdrawals encoder: %s", err)
-			WriteError(w, http.StatusInternalServerError, err)
-			return
-		}
-		c.Logger.Debugf("Encoded JSON: %s", buf.String())
-
-		w.Header().Set(ContentType, ContentValueJSON)
-		w.WriteHeader(http.StatusOK)
-
-		_, err = w.Write(buf.Bytes())
-		if err != nil {
-			c.Logger.Infof("GetWithdrawals response: %s", err)
-			WriteError(w, http.StatusInternalServerError, err)
-			return
-		}
-	}
-}
+//func (c *Controller) GetCurrentBalance() http.HandlerFunc {
+//	return func(w http.ResponseWriter, r *http.Request) {
+//		user, err := auth.GetUser(r)
+//		if err != nil {
+//			WriteError(w, http.StatusInternalServerError, err)
+//			return
+//		}
+//
+//		balance, err := c.Storage.Withdrawals().GetCurrentBalance(user)
+//		if err != nil {
+//			c.Logger.Infof("GetCurrentBalance error: %s", err)
+//			WriteError(w, http.StatusInternalServerError, err)
+//			return
+//		}
+//
+//		withdrawn, err := c.Storage.Withdrawals().GetWithdrawnAmount(user)
+//		if err != nil {
+//			WriteError(w, http.StatusInternalServerError, err)
+//			return
+//		}
+//
+//		response := &model.Balance{
+//			Current:   balance,
+//			Withdrawn: withdrawn,
+//		}
+//
+//		buf := bytes.NewBuffer([]byte{})
+//		encoder := json.NewEncoder(buf)
+//		err = encoder.Encode(response)
+//		if err != nil {
+//			c.Logger.Infof("GetCurrentBalance encoder: %s", err)
+//			WriteError(w, http.StatusInternalServerError, err)
+//			return
+//		}
+//		c.Logger.Debugf("Encoded JSON: %s", buf.String())
+//
+//		w.Header().Set(ContentType, ContentValueJSON)
+//		w.WriteHeader(http.StatusOK)
+//
+//		_, err = w.Write(buf.Bytes())
+//		if err != nil {
+//			c.Logger.Infof("GetCurrentBalance response: %s", err)
+//			WriteError(w, http.StatusInternalServerError, err)
+//			return
+//		}
+//	}
+//}
+//
+//func (c *Controller) WithdrawLoyaltyPoints() http.HandlerFunc {
+//	return func(w http.ResponseWriter, r *http.Request) {
+//		var withdraw *model.Withdraw
+//		if err := json.NewDecoder(r.Body).Decode(&withdraw); err != nil {
+//			WriteError(w, http.StatusBadRequest, err)
+//			return
+//		}
+//
+//		if withdraw.Amount < 0 {
+//			WriteResponse(w, http.StatusBadRequest, "")
+//			return
+//		}
+//
+//		if !IsValidOrderNumber(withdraw.Order) {
+//			WriteResponse(w, http.StatusUnprocessableEntity, "")
+//			return
+//		}
+//
+//		user, err := auth.GetUser(r)
+//		if err != nil {
+//			WriteError(w, http.StatusInternalServerError, err)
+//			return
+//		}
+//
+//		balance, err := c.Storage.Withdrawals().GetCurrentBalance(user)
+//		if err != nil {
+//			c.Logger.Infof("GetCurrentBalance error: %s", err)
+//			WriteError(w, http.StatusInternalServerError, err)
+//			return
+//		}
+//
+//		if balance < withdraw.Amount {
+//			WriteResponse(w, http.StatusPaymentRequired, "")
+//			return
+//		}
+//
+//		withdraw.Login = user
+//		withdraw.Amount = -1 * withdraw.Amount
+//
+//		if err := c.Storage.Withdrawals().Withdraw(withdraw); err != nil {
+//			c.Logger.Infof("Withdraw error: %s", err)
+//			WriteError(w, http.StatusInternalServerError, err)
+//			return
+//		}
+//		WriteResponse(w, http.StatusOK, "")
+//	}
+//}
+//
+//func (c *Controller) GetWithdrawals() http.HandlerFunc {
+//	return func(w http.ResponseWriter, r *http.Request) {
+//		user, err := auth.GetUser(r)
+//		if err != nil {
+//			WriteError(w, http.StatusInternalServerError, err)
+//			return
+//		}
+//
+//		response, err := c.Storage.Withdrawals().GetWithdrawals(user)
+//		if err != nil && err != storage.ErrorWithdrawalNotFound {
+//			c.Logger.Infof("GetWithdrawals error: %s", err)
+//			WriteError(w, http.StatusInternalServerError, err)
+//			return
+//		}
+//		if err == storage.ErrorWithdrawalNotFound {
+//			c.Logger.Infof("GetWithdrawals error: %s", err)
+//			WriteError(w, http.StatusInternalServerError, err)
+//			return
+//		}
+//
+//		buf := bytes.NewBuffer([]byte{})
+//		encoder := json.NewEncoder(buf)
+//		err = encoder.Encode(response)
+//		if err != nil {
+//			c.Logger.Infof("GetWithdrawals encoder: %s", err)
+//			WriteError(w, http.StatusInternalServerError, err)
+//			return
+//		}
+//		c.Logger.Debugf("Encoded JSON: %s", buf.String())
+//
+//		w.Header().Set(ContentType, ContentValueJSON)
+//		w.WriteHeader(http.StatusOK)
+//
+//		_, err = w.Write(buf.Bytes())
+//		if err != nil {
+//			c.Logger.Infof("GetWithdrawals response: %s", err)
+//			WriteError(w, http.StatusInternalServerError, err)
+//			return
+//		}
+//	}
+//}
