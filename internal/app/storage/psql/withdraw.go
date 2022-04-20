@@ -3,6 +3,7 @@ package psql
 import (
 	"go-developer-course-diploma/internal/app/model"
 	"go-developer-course-diploma/internal/app/storage"
+	"log"
 )
 
 type WithdrawRepository struct {
@@ -26,10 +27,12 @@ func (r *WithdrawRepository) Withdraw(o *model.Withdraw) error {
 
 func (r *WithdrawRepository) GetCurrentBalance(login string) (float64, error) {
 	var balance *float64
+	log.Print("GetCurrentBalance sql start")
 	err := r.Storage.DB.QueryRow(
 		"SELECT sum(amount) from withdrawals where login = $1",
 		login,
 	).Scan(&balance)
+	log.Printf("GetCurrentBalance sql balance %f", *balance)
 
 	if err != nil {
 		return 0, err

@@ -31,7 +31,7 @@ const PostgreSQLWithdrawalsTable = `CREATE TABLE IF NOT EXISTS withdrawals (
     id bigserial NOT NULL PRIMARY KEY, 
     login text NOT NULL,
     number bigserial NOT NULL,
-    amount numeric,
+    amount numeric DEFAULT 0,
     processed_at timestamptz NOT NULL);`
 
 func RunApp(cfg *configs.Config) error {
