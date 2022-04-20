@@ -52,6 +52,7 @@ func RunApp(cfg *configs.Config) error {
 
 	db, err := connectDB(cfg.DatabaseURI, logger)
 	if err != nil {
+		logger.Infof("connectDB error: %s", err)
 		return err
 	}
 	defer db.Close()
