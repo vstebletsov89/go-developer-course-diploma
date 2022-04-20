@@ -386,12 +386,12 @@ func (c *Controller) GetWithdrawals() http.HandlerFunc {
 		}
 
 		response, err := c.TransactionRepository.GetWithdrawals(user)
-		if err != nil && err != storage.ErrorWithdrawalNotFound {
+		if err != nil && !errors.Is(err, storage.ErrorWithdrawalNotFound) {
 			c.Logger.Infof("GetWithdrawals error: %s", err)
 			WriteError(w, http.StatusInternalServerError, err)
 			return
 		}
-		if err == storage.ErrorWithdrawalNotFound {
+		if errors.Is(err, storage.ErrorWithdrawalNotFound) {
 			c.Logger.Infof("GetWithdrawals error: %s", err)
 			WriteError(w, http.StatusInternalServerError, err)
 			return

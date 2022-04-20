@@ -1,7 +1,5 @@
-1) refactoring: extract common parts (json response, etc)
-2) refactoring: remove extra initialization for storage (extra layer) move links for repos from Storage to controller, remove Storage type
-3) remove extra debug messages when all tests passed (simple log msgs remove!)
-4) add unit tests for all handlers (mocking?)
-5) try to use native migration
-6) add docker for external dependencies
-7) add makefile
+1) remove extra debug messages when all tests passed (simple log msgs remove!)
+2) add unit tests for all handlers (mocking?)
+3) try to use native migration
+4) add docker for external dependencies
+5) add makefile
