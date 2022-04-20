@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	_ "github.com/lib/pq"
 	"github.com/sirupsen/logrus"
 	"github.com/theplant/luhn"
 	"go-developer-course-diploma/internal/app/configs"
