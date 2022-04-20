@@ -46,7 +46,7 @@ func (r *TransactionRepository) GetCurrentBalance(login string) (float64, error)
 func (r *TransactionRepository) GetWithdrawnAmount(login string) (float64, error) {
 	var count *float64
 	err := r.Storage.DB.QueryRow(
-		"SELECT sum(amount) from transactions where login = $1 AND amount < 0",
+		"SELECT count(amount) from transactions where login = $1 AND amount < 0",
 		login,
 	).Scan(&count)
 
@@ -54,7 +54,21 @@ func (r *TransactionRepository) GetWithdrawnAmount(login string) (float64, error
 		return 0, err
 	}
 
-	return *count * -1, nil
+	var amount *float64
+	if *count > 0 {
+		err := r.Storage.DB.QueryRow(
+			"SELECT sum(amount) from transactions where login = $1 AND amount < 0",
+			login,
+		).Scan(&amount)
+
+		if err != nil {
+			return 0, err
+		}
+	} else {
+		return 0, nil
+	}
+
+	return *amount * -1, nil
 }
 
 func (r *TransactionRepository) GetWithdrawals(login string) ([]*model.Transaction, error) {
