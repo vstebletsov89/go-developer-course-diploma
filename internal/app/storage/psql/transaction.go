@@ -53,7 +53,7 @@ func (r *TransactionRepository) GetWithdrawnAmount(login string) (float64, error
 		return 0, err
 	}
 
-	return *count, nil
+	return *count * -1, nil
 }
 
 func (r *TransactionRepository) GetWithdrawals(login string) ([]*model.Transaction, error) {
