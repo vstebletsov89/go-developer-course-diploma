@@ -1,20 +1,24 @@
-package psql
+package storage
 
 import (
 	"database/sql"
 	"go-developer-course-diploma/internal/app/model"
-	"go-developer-course-diploma/internal/app/storage"
+	"go-developer-course-diploma/internal/app/storage/repository"
 	"log"
 )
 
 type TransactionRepository struct {
-	Conn *sql.DB
+	conn *sql.DB
+}
+
+func NewTransactionRepository(conn *sql.DB) *TransactionRepository {
+	return &TransactionRepository{conn: conn}
 }
 
 func (r *TransactionRepository) ExecuteTransaction(t *model.Transaction) error {
 	log.Print("ExecuteTransaction sql: start")
 	log.Printf("%+v\n", t)
-	err := r.Conn.QueryRow(
+	err := r.conn.QueryRow(
 		"INSERT INTO transactions (login, number, amount, processed_at) VALUES ($1, $2, $3, NOW()) RETURNING id",
 		t.Login,
 		t.Order,
@@ -32,7 +36,7 @@ func (r *TransactionRepository) GetCurrentBalance(login string) (float64, error)
 	var balance *float64
 	log.Print("GetCurrentBalance sql start")
 	log.Printf("Login '%s'", login)
-	err := r.Conn.QueryRow(
+	err := r.conn.QueryRow(
 		"SELECT sum(amount) from transactions where login = $1",
 		login,
 	).Scan(&balance)
@@ -46,7 +50,7 @@ func (r *TransactionRepository) GetCurrentBalance(login string) (float64, error)
 
 func (r *TransactionRepository) GetWithdrawnAmount(login string) (float64, error) {
 	var count *float64
-	err := r.Conn.QueryRow(
+	err := r.conn.QueryRow(
 		"SELECT count(amount) from transactions where login = $1 AND amount < 0",
 		login,
 	).Scan(&count)
@@ -57,7 +61,7 @@ func (r *TransactionRepository) GetWithdrawnAmount(login string) (float64, error
 
 	var amount *float64
 	if *count > 0 {
-		err := r.Conn.QueryRow(
+		err := r.conn.QueryRow(
 			"SELECT sum(amount) from transactions where login = $1 AND amount < 0",
 			login,
 		).Scan(&amount)
@@ -74,7 +78,7 @@ func (r *TransactionRepository) GetWithdrawnAmount(login string) (float64, error
 
 func (r *TransactionRepository) GetWithdrawals(login string) ([]*model.Transaction, error) {
 	var transactions []*model.Transaction
-	rows, err := r.Conn.Query(
+	rows, err := r.conn.Query(
 		"SELECT order, amount, processed_at FROM transactions WHERE login = $1",
 		login,
 	)
@@ -100,7 +104,7 @@ func (r *TransactionRepository) GetWithdrawals(login string) ([]*model.Transacti
 	}
 
 	if len(transactions) == 0 {
-		return nil, storage.ErrorWithdrawalNotFound
+		return nil, repository.ErrorWithdrawalNotFound
 	}
 
 	return transactions, nil

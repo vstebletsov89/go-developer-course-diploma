@@ -2,7 +2,6 @@ package controller
 
 import (
 	"bytes"
-	"database/sql"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -13,8 +12,7 @@ import (
 	"go-developer-course-diploma/internal/app/configs"
 	"go-developer-course-diploma/internal/app/model"
 	"go-developer-course-diploma/internal/app/service/auth"
-	"go-developer-course-diploma/internal/app/storage"
-	"go-developer-course-diploma/internal/app/storage/psql"
+	"go-developer-course-diploma/internal/app/storage/repository"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -76,16 +74,18 @@ func getPasswordHash(u *model.User) {
 type Controller struct {
 	Config                *configs.Config
 	Logger                *logrus.Logger
-	UserRepository        *psql.UserRepository
-	OrderRepository       *psql.OrderRepository
-	TransactionRepository *psql.TransactionRepository
+	UserRepository        repository.UserRepository
+	OrderRepository       repository.OrderRepository
+	TransactionRepository repository.TransactionRepository
 }
 
-func NewController(c *configs.Config, db *sql.DB, l *logrus.Logger) *Controller {
-	return &Controller{Config: c, Logger: l,
-		UserRepository:        &psql.UserRepository{Conn: db},
-		OrderRepository:       &psql.OrderRepository{Conn: db},
-		TransactionRepository: &psql.TransactionRepository{Conn: db}}
+func NewController(cfg *configs.Config, logger *logrus.Logger, userStore repository.UserRepository, orderStore repository.OrderRepository, transactionStore repository.TransactionRepository) *Controller {
+	return &Controller{
+		Config:                cfg,
+		Logger:                logger,
+		UserRepository:        userStore,
+		OrderRepository:       orderStore,
+		TransactionRepository: transactionStore}
 }
 
 func (c *Controller) RegisterHandler() http.HandlerFunc {
@@ -104,12 +104,12 @@ func (c *Controller) RegisterHandler() http.HandlerFunc {
 		getPasswordHash(user)
 
 		err := c.UserRepository.RegisterUser(user)
-		if err != nil && !errors.Is(err, storage.ErrorUserAlreadyExist) {
+		if err != nil && !errors.Is(err, repository.ErrorUserAlreadyExist) {
 			c.Logger.Infof("RegisterUser error: %s", err)
 			WriteError(w, http.StatusInternalServerError, err)
 			return
 		}
-		if errors.Is(err, storage.ErrorUserAlreadyExist) {
+		if errors.Is(err, repository.ErrorUserAlreadyExist) {
 			WriteError(w, http.StatusConflict, err)
 			return
 		}
@@ -133,12 +133,12 @@ func (c *Controller) LoginHandler() http.HandlerFunc {
 		}
 
 		userDB, err := c.UserRepository.GetUser(user.Login)
-		if err != nil && !errors.Is(err, storage.ErrorUserNotFound) {
+		if err != nil && !errors.Is(err, repository.ErrorUserNotFound) {
 			c.Logger.Infof("GetUser error: %s", err)
 			WriteError(w, http.StatusInternalServerError, err)
 			return
 		}
-		if errors.Is(err, storage.ErrorUserNotFound) {
+		if errors.Is(err, repository.ErrorUserNotFound) {
 			WriteError(w, http.StatusUnauthorized, err)
 			return
 		}
@@ -179,13 +179,13 @@ func (c *Controller) UploadOrder() http.HandlerFunc {
 		}
 
 		userDB, err := c.OrderRepository.GetUserByOrderNumber(number)
-		if err != nil && !errors.Is(err, storage.ErrorOrderNotFound) {
+		if err != nil && !errors.Is(err, repository.ErrorOrderNotFound) {
 			c.Logger.Infof("GetUserByOrderNumber error: %s", err)
 			WriteError(w, http.StatusInternalServerError, err)
 			return
 		}
 
-		if errors.Is(err, storage.ErrorOrderNotFound) {
+		if errors.Is(err, repository.ErrorOrderNotFound) {
 			order := &model.Order{
 				Number: number,
 				Status: NEW,
@@ -280,12 +280,12 @@ func (c *Controller) GetOrders() http.HandlerFunc {
 		}
 
 		response, err := c.OrderRepository.GetOrders(user)
-		if err != nil && !errors.Is(err, storage.ErrorOrderNotFound) {
+		if err != nil && !errors.Is(err, repository.ErrorOrderNotFound) {
 			c.Logger.Infof("GetOrders error: %s", err)
 			WriteError(w, http.StatusInternalServerError, err)
 			return
 		}
-		if errors.Is(err, storage.ErrorOrderNotFound) {
+		if errors.Is(err, repository.ErrorOrderNotFound) {
 			c.Logger.Infof("GetOrders error: %s", err)
 			WriteError(w, http.StatusNoContent, err)
 			return
@@ -386,12 +386,12 @@ func (c *Controller) GetWithdrawals() http.HandlerFunc {
 		}
 
 		response, err := c.TransactionRepository.GetWithdrawals(user)
-		if err != nil && !errors.Is(err, storage.ErrorWithdrawalNotFound) {
+		if err != nil && !errors.Is(err, repository.ErrorWithdrawalNotFound) {
 			c.Logger.Infof("GetWithdrawals error: %s", err)
 			WriteError(w, http.StatusInternalServerError, err)
 			return
 		}
-		if errors.Is(err, storage.ErrorWithdrawalNotFound) {
+		if errors.Is(err, repository.ErrorWithdrawalNotFound) {
 			c.Logger.Infof("GetWithdrawals error: %s", err)
 			WriteError(w, http.StatusInternalServerError, err)
 			return

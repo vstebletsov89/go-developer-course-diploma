@@ -1,17 +1,21 @@
-package psql
+package storage
 
 import (
 	"database/sql"
 	"go-developer-course-diploma/internal/app/model"
-	"go-developer-course-diploma/internal/app/storage"
+	"go-developer-course-diploma/internal/app/storage/repository"
 )
 
 type UserRepository struct {
-	Conn *sql.DB
+	conn *sql.DB
+}
+
+func NewUserRepository(conn *sql.DB) *UserRepository {
+	return &UserRepository{conn: conn}
 }
 
 func (r *UserRepository) RegisterUser(u *model.User) error {
-	err := r.Conn.QueryRow(
+	err := r.conn.QueryRow(
 		"INSERT INTO users (login, password) VALUES ($1, $2) ON CONFLICT DO NOTHING RETURNING id",
 		u.Login,
 		u.Password,
@@ -21,14 +25,14 @@ func (r *UserRepository) RegisterUser(u *model.User) error {
 		return err
 	}
 	if err == sql.ErrNoRows {
-		return storage.ErrorUserAlreadyExist
+		return repository.ErrorUserAlreadyExist
 	}
 	return nil
 }
 
 func (r *UserRepository) GetUser(login string) (*model.User, error) {
 	u := &model.User{}
-	err := r.Conn.QueryRow(
+	err := r.conn.QueryRow(
 		"SELECT id, login, password FROM users WHERE login = $1",
 		login,
 	).Scan(
@@ -41,7 +45,7 @@ func (r *UserRepository) GetUser(login string) (*model.User, error) {
 		return nil, err
 	}
 	if err == sql.ErrNoRows {
-		return nil, storage.ErrorUserNotFound
+		return nil, repository.ErrorUserNotFound
 	}
 
 	return u, nil

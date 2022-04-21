@@ -8,6 +8,7 @@ import (
 	"go-developer-course-diploma/internal/app/configs"
 	"go-developer-course-diploma/internal/app/controller"
 	"go-developer-course-diploma/internal/app/server"
+	"go-developer-course-diploma/internal/app/storage"
 	"log"
 	"net/http"
 	"time"
@@ -53,7 +54,10 @@ func RunApp(cfg *configs.Config) error {
 	}
 	defer db.Close()
 
-	c := controller.NewController(cfg, db, logger)
+	userStore := storage.NewUserRepository(db)
+	orderStore := storage.NewOrderRepository(db)
+	transactionStore := storage.NewTransactionRepository(db)
+	c := controller.NewController(cfg, logger, userStore, orderStore, transactionStore)
 
 	// check pending orders
 	go accrual.UpdatePendingOrders(c, context.Background())

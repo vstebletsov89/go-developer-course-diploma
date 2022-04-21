@@ -1,7 +1,7 @@
 package auth
 
 import (
-	"go-developer-course-diploma/internal/app/storage"
+	"go-developer-course-diploma/internal/app/storage/repository"
 	"math/rand"
 	"net/http"
 	"time"
@@ -52,7 +52,7 @@ func GetUser(r *http.Request) (string, error) {
 		cookie, _ := r.Cookie(cookieName)
 		return sessions[cookie.Value].Login, nil
 	}
-	return "", storage.ErrorUnauthorized
+	return "", repository.ErrorUnauthorized
 }
 
 func generateRandomString() string {
