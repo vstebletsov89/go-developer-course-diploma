@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"go-developer-course-diploma/internal/app/model"
 	"go-developer-course-diploma/internal/app/storage/repository"
-	"log"
 )
 
 type OrderRepository struct {
@@ -16,10 +15,6 @@ func NewOrderRepository(conn *sql.DB) *OrderRepository {
 }
 
 func (r *OrderRepository) UploadOrder(o *model.Order) error {
-	log.Println("UploadOrder sql: started")
-	log.Printf("%+v\n", o)
-	log.Printf("UploadOrder sql login: '%s'", o.Login)
-
 	err := r.conn.QueryRow(
 		"INSERT INTO orders (number, status, login, uploaded_at) VALUES ($1, $2, $3, NOW()) ON CONFLICT DO NOTHING RETURNING id",
 		o.Number,
@@ -31,7 +26,6 @@ func (r *OrderRepository) UploadOrder(o *model.Order) error {
 		return err
 	}
 
-	log.Println("UploadOrder sql: done")
 	return nil
 }
 
@@ -56,7 +50,7 @@ func (r *OrderRepository) GetUserByOrderNumber(number string) (string, error) {
 
 func (r *OrderRepository) GetPendingOrders() ([]string, error) {
 	var orders []string
-	log.Println("GetPendingOrders sql: started")
+
 	rows, err := r.conn.Query(
 		"SELECT number FROM orders WHERE status = 'NEW' OR status = 'PROCESSING' ORDER BY uploaded_at",
 	)
@@ -79,15 +73,12 @@ func (r *OrderRepository) GetPendingOrders() ([]string, error) {
 		return nil, err
 	}
 
-	log.Println("GetPendingOrders sql: done")
-	log.Printf("%+v\n", orders)
 	return orders, nil
 }
 
 func (r *OrderRepository) GetOrders(login string) ([]*model.Order, error) {
 	var orders []*model.Order
-	log.Println("GetOrders sql: started")
-	log.Printf("GetOrders sql login: '%s'", login)
+
 	rows, err := r.conn.Query(
 		"SELECT number, status, accrual, uploaded_at FROM orders WHERE login = $1 ORDER BY uploaded_at",
 		login,
@@ -108,7 +99,6 @@ func (r *OrderRepository) GetOrders(login string) ([]*model.Order, error) {
 		if err != nil {
 			return nil, err
 		}
-		log.Printf("%+v\n", o)
 		orders = append(orders, o)
 	}
 
@@ -120,13 +110,10 @@ func (r *OrderRepository) GetOrders(login string) ([]*model.Order, error) {
 		return nil, repository.ErrorOrderNotFound
 	}
 
-	log.Println("GetOrders sql: done")
 	return orders, nil
 }
 
 func (r *OrderRepository) UpdateOrderStatus(o *model.Order) error {
-	log.Println("UpdateOrderStatus sql: started")
-	log.Printf("%+v\n", o)
 	err := r.conn.QueryRow(
 		"UPDATE orders SET status = $1, accrual = $2 WHERE number = $3",
 		o.Status,
@@ -137,6 +124,5 @@ func (r *OrderRepository) UpdateOrderStatus(o *model.Order) error {
 	if err != nil && err != sql.ErrNoRows {
 		return err
 	}
-	log.Println("UpdateOrderStatus sql: done")
 	return nil
 }

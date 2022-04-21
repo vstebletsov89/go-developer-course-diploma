@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"go-developer-course-diploma/internal/app/model"
 	"go-developer-course-diploma/internal/app/storage/repository"
-	"log"
 )
 
 type TransactionRepository struct {
@@ -16,8 +15,6 @@ func NewTransactionRepository(conn *sql.DB) *TransactionRepository {
 }
 
 func (r *TransactionRepository) ExecuteTransaction(t *model.Transaction) error {
-	log.Print("ExecuteTransaction sql: start")
-	log.Printf("%+v\n", t)
 	err := r.conn.QueryRow(
 		"INSERT INTO transactions (login, number, amount, processed_at) VALUES ($1, $2, $3, NOW()) RETURNING id",
 		t.Login,
@@ -28,14 +25,12 @@ func (r *TransactionRepository) ExecuteTransaction(t *model.Transaction) error {
 	if err != nil {
 		return err
 	}
-	log.Print("ExecuteTransaction sql: end")
 	return nil
 }
 
 func (r *TransactionRepository) GetCurrentBalance(login string) (float64, error) {
 	var balance *float64
-	log.Print("GetCurrentBalance sql start")
-	log.Printf("Login '%s'", login)
+
 	err := r.conn.QueryRow(
 		"SELECT sum(amount) from transactions where login = $1",
 		login,

@@ -3,7 +3,6 @@ package configs
 import (
 	"flag"
 	"github.com/caarlos0/env/v6"
-	"log"
 )
 
 type Config struct {
@@ -30,6 +29,5 @@ func ReadConfig() (*Config, error) {
 	}
 	cfg.readCommandLineArgs()
 
-	log.Printf("%+v\n\n", cfg)
 	return &cfg, nil
 }

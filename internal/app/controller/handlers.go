@@ -14,7 +14,6 @@ import (
 	"go-developer-course-diploma/internal/app/service/auth"
 	"go-developer-course-diploma/internal/app/storage/repository"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"strconv"
 )
@@ -256,7 +255,7 @@ func (c *Controller) UpdatePendingOrders(orders []string) error {
 
 			transaction := &model.Transaction{Login: userDB, Order: order.Number, Amount: order.Accrual}
 
-			log.Printf("%+v\n", transaction)
+			c.Logger.Debugf("%+v\n", transaction)
 
 			if err := c.TransactionRepository.ExecuteTransaction(transaction); err != nil {
 				c.Logger.Infof("ExecuteTransaction error: %s", err)

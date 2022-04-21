@@ -47,6 +47,9 @@ func RunApp(cfg *configs.Config) error {
 	}
 	logger.SetLevel(level)
 
+	// debug config
+	logger.Debugf("%+v\n\n", cfg)
+
 	db, err := connectDB(cfg.DatabaseURI, logger)
 	if err != nil {
 		logger.Infof("connectDB error: %s", err)

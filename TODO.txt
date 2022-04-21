@@ -1,5 +1,2 @@
-1) remove extra debug messages when all tests passed (simple log msgs remove!)
-2) add unit tests for all handlers (mocking?)
-3) try to use native migration
-4) add docker for external dependencies
-5) add makefile
+1) add unit tests for all handlers (mocking?)
+2) add docker for external dependencies
