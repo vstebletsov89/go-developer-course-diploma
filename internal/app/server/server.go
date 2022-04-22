@@ -29,7 +29,7 @@ func (s *server) NewRouter(controller *controller.Controller) {
 	s.router.HandleFunc("/api/user/login", controller.LoginHandler()).Methods(http.MethodPost)
 
 	secure := s.router.NewRoute().Subrouter()
-	secure.Use(auth.Authorization)
+	secure.Use(auth.MiddlewareGeneratorAuthorization(controller.UserAuthorizationStore))
 	secure.HandleFunc("/api/user/orders", controller.UploadOrder()).Methods(http.MethodPost)
 	secure.HandleFunc("/api/user/orders", controller.GetOrders()).Methods(http.MethodGet)
 	secure.HandleFunc("/api/user/balance", controller.GetCurrentBalance()).Methods(http.MethodGet)
