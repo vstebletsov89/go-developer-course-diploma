@@ -35,69 +35,70 @@ func (m *MockUserRepository) GetUser(login string) (*model.User, error) {
 
 type MockOrderRepository struct {
 	mock.Mock
-	//TODO: add required fields (map structs?)
 }
 
 var _ OrderRepository = (*MockOrderRepository)(nil)
 
 func NewMockOrderRepository() *MockOrderRepository {
-	//TODO: ...
 	return &MockOrderRepository{}
 }
 
 func (m *MockOrderRepository) UploadOrder(order *model.Order) error {
-	//TODO implement me
-	panic("implement me")
+	// do nothing
+	return nil
 }
 
 func (m *MockOrderRepository) GetOrders(s string) ([]*model.Order, error) {
-	//TODO implement me
-	panic("implement me")
+	var orders []*model.Order
+	orders = append(orders, &model.Order{Number: "10001", Status: "PROCESSED", Accrual: 0})
+	orders = append(orders, &model.Order{Number: "10002", Status: "PROCESSING", Accrual: 0})
+	orders = append(orders, &model.Order{Number: "10003", Status: "NEW", Accrual: 0})
+	return orders, nil
 }
 
 func (m *MockOrderRepository) GetUserByOrderNumber(s string) (string, error) {
-	//TODO implement me
-	panic("implement me")
+	return s, ErrorOrderNotFound
 }
 
 func (m *MockOrderRepository) UpdateOrderStatus(order *model.Order) error {
-	//TODO implement me
-	panic("implement me")
+	// do nothing
+	return nil
 }
 
 func (m *MockOrderRepository) GetPendingOrders() ([]string, error) {
-	//TODO implement me
-	panic("implement me")
+	// do nothing
+	return nil, nil
 }
 
 type MockTransactionRepository struct {
 	mock.Mock
-	//TODO: add required fields (map structs?)
 }
 
 var _ TransactionRepository = (*MockTransactionRepository)(nil)
 
 func NewMockTransactionRepository() *MockTransactionRepository {
-	//TODO: ...
 	return &MockTransactionRepository{}
 }
 
 func (m *MockTransactionRepository) ExecuteTransaction(transaction *model.Transaction) error {
-	//TODO implement me
-	panic("implement me")
+	// do nothing
+	return nil
 }
 
 func (m *MockTransactionRepository) GetCurrentBalance(s string) (float64, error) {
-	//TODO implement me
-	panic("implement me")
+	// hardcoded balance for tests
+	return 9000.456, nil
 }
 
 func (m *MockTransactionRepository) GetWithdrawnAmount(s string) (float64, error) {
-	//TODO implement me
-	panic("implement me")
+	// hardcoded withdrawn amount for tests
+	return 3000.15, nil
 }
 
 func (m *MockTransactionRepository) GetWithdrawals(s string) ([]*model.Transaction, error) {
-	//TODO implement me
-	panic("implement me")
+	var withdrawals []*model.Transaction
+	withdrawals = append(withdrawals, &model.Transaction{Order: "10001", Amount: 50.6})
+	withdrawals = append(withdrawals, &model.Transaction{Order: "10002", Amount: 789.45})
+	withdrawals = append(withdrawals, &model.Transaction{Order: "10003", Amount: 256.9812345})
+	return withdrawals, nil
 }

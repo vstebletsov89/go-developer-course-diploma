@@ -8,6 +8,7 @@ import (
 	"go-developer-course-diploma/internal/app/configs"
 	"go-developer-course-diploma/internal/app/controller"
 	"go-developer-course-diploma/internal/app/server"
+	"go-developer-course-diploma/internal/app/service/auth"
 	"go-developer-course-diploma/internal/app/storage"
 	"log"
 	"net/http"
@@ -60,7 +61,8 @@ func RunApp(cfg *configs.Config) error {
 	userStore := storage.NewUserRepository(db)
 	orderStore := storage.NewOrderRepository(db)
 	transactionStore := storage.NewTransactionRepository(db)
-	c := controller.NewController(cfg, logger, userStore, orderStore, transactionStore)
+	userAuthStore := auth.NewUserAuthorizationStore()
+	c := controller.NewController(cfg, logger, userStore, orderStore, transactionStore, userAuthStore)
 
 	// check pending orders
 	go accrual.UpdatePendingOrders(c, context.Background())

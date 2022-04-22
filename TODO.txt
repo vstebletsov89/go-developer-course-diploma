@@ -1,2 +1,1 @@
-1) add unit tests for all handlers (mocking?)
-2) add docker for external dependencies
+1) add docker for external dependencies?

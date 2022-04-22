@@ -11,7 +11,7 @@ import (
 	"github.com/theplant/luhn"
 	"go-developer-course-diploma/internal/app/configs"
 	"go-developer-course-diploma/internal/app/model"
-	"go-developer-course-diploma/internal/app/service/auth"
+	"go-developer-course-diploma/internal/app/service/auth/secure"
 	"go-developer-course-diploma/internal/app/storage/repository"
 	"io/ioutil"
 	"net/http"
@@ -71,20 +71,23 @@ func getPasswordHash(u *model.User) {
 }
 
 type Controller struct {
-	Config                *configs.Config
-	Logger                *logrus.Logger
-	UserRepository        repository.UserRepository
-	OrderRepository       repository.OrderRepository
-	TransactionRepository repository.TransactionRepository
+	Config                 *configs.Config
+	Logger                 *logrus.Logger
+	UserRepository         repository.UserRepository
+	OrderRepository        repository.OrderRepository
+	TransactionRepository  repository.TransactionRepository
+	UserAuthorizationStore secure.UserAuthorization
 }
 
-func NewController(cfg *configs.Config, logger *logrus.Logger, userStore repository.UserRepository, orderStore repository.OrderRepository, transactionStore repository.TransactionRepository) *Controller {
+func NewController(cfg *configs.Config, logger *logrus.Logger, userStore repository.UserRepository, orderStore repository.OrderRepository, transactionStore repository.TransactionRepository, userAuthorizationStore secure.UserAuthorization) *Controller {
 	return &Controller{
-		Config:                cfg,
-		Logger:                logger,
-		UserRepository:        userStore,
-		OrderRepository:       orderStore,
-		TransactionRepository: transactionStore}
+		Config:                 cfg,
+		Logger:                 logger,
+		UserRepository:         userStore,
+		OrderRepository:        orderStore,
+		TransactionRepository:  transactionStore,
+		UserAuthorizationStore: userAuthorizationStore,
+	}
 }
 
 func (c *Controller) RegisterHandler() http.HandlerFunc {
@@ -113,7 +116,7 @@ func (c *Controller) RegisterHandler() http.HandlerFunc {
 			return
 		}
 
-		auth.SetCookie(w, user.Login)
+		c.UserAuthorizationStore.SetCookie(w, user.Login)
 		WriteResponse(w, http.StatusOK, "")
 	}
 }
@@ -145,7 +148,7 @@ func (c *Controller) LoginHandler() http.HandlerFunc {
 		getPasswordHash(user)
 
 		if userDB.Login == user.Login && userDB.Password == user.Password {
-			auth.SetCookie(w, user.Login)
+			c.UserAuthorizationStore.SetCookie(w, user.Login)
 			WriteResponse(w, http.StatusOK, "")
 			return
 		}
@@ -167,11 +170,11 @@ func (c *Controller) UploadOrder() http.HandlerFunc {
 		c.Logger.Debugf("UploadOrder number: %s", number)
 
 		if !IsValidOrderNumber(number) {
-			WriteResponse(w, http.StatusUnprocessableEntity, "")
+			WriteResponse(w, http.StatusUnprocessableEntity, "invalid order number")
 			return
 		}
 
-		user, err := auth.GetUser(r)
+		user, err := c.UserAuthorizationStore.GetUser(r)
 		if err != nil {
 			WriteError(w, http.StatusInternalServerError, err)
 			return
@@ -271,7 +274,7 @@ func (c *Controller) UpdatePendingOrders(orders []string) error {
 func (c *Controller) GetOrders() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		c.Logger.Debug("GetOrders handler")
-		user, err := auth.GetUser(r)
+		user, err := c.UserAuthorizationStore.GetUser(r)
 		if err != nil {
 			c.Logger.Infof("GetUser error: %s", err)
 			WriteError(w, http.StatusInternalServerError, err)
@@ -297,7 +300,7 @@ func (c *Controller) GetOrders() http.HandlerFunc {
 func (c *Controller) GetCurrentBalance() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		c.Logger.Debug("GetCurrentBalance handler")
-		user, err := auth.GetUser(r)
+		user, err := c.UserAuthorizationStore.GetUser(r)
 		if err != nil {
 			WriteError(w, http.StatusInternalServerError, err)
 			return
@@ -335,16 +338,16 @@ func (c *Controller) WithdrawLoyaltyPoints() http.HandlerFunc {
 		}
 
 		if withdraw.Amount < 0 {
-			WriteResponse(w, http.StatusBadRequest, "")
+			WriteResponse(w, http.StatusBadRequest, "withdraw sum should be greater than zero")
 			return
 		}
 
 		if !IsValidOrderNumber(withdraw.Order) {
-			WriteResponse(w, http.StatusUnprocessableEntity, "")
+			WriteResponse(w, http.StatusUnprocessableEntity, "invalid order number")
 			return
 		}
 
-		user, err := auth.GetUser(r)
+		user, err := c.UserAuthorizationStore.GetUser(r)
 		if err != nil {
 			WriteError(w, http.StatusInternalServerError, err)
 			return
@@ -358,7 +361,7 @@ func (c *Controller) WithdrawLoyaltyPoints() http.HandlerFunc {
 		}
 
 		if balance < withdraw.Amount {
-			WriteResponse(w, http.StatusPaymentRequired, "")
+			WriteResponse(w, http.StatusPaymentRequired, "insufficient loyalty points")
 			return
 		}
 
@@ -378,7 +381,7 @@ func (c *Controller) WithdrawLoyaltyPoints() http.HandlerFunc {
 func (c *Controller) GetWithdrawals() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		c.Logger.Debug("GetWithdrawals handler")
-		user, err := auth.GetUser(r)
+		user, err := c.UserAuthorizationStore.GetUser(r)
 		if err != nil {
 			WriteError(w, http.StatusInternalServerError, err)
 			return

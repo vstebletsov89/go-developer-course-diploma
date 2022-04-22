@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"go-developer-course-diploma/internal/app/service/auth/secure"
 	"go-developer-course-diploma/internal/app/storage/repository"
 	"math/rand"
 	"net/http"
@@ -16,15 +17,23 @@ type Session struct {
 	ExpiredAt time.Time
 }
 
-var sessions = make(map[string]Session)
-
 func init() {
 	rand.Seed(time.Now().UnixNano())
 }
 
-func SetCookie(w http.ResponseWriter, login string) {
+type UserAuthorizationStore struct {
+	sessions map[string]Session
+}
+
+func NewUserAuthorizationStore() *UserAuthorizationStore {
+	return &UserAuthorizationStore{sessions: make(map[string]Session)}
+}
+
+var _ secure.UserAuthorization = (*UserAuthorizationStore)(nil)
+
+func (s *UserAuthorizationStore) SetCookie(w http.ResponseWriter, login string) {
 	sessionID := generateRandomString()
-	sessions[sessionID] = Session{
+	s.sessions[sessionID] = Session{
 		Login:     login,
 		ExpiredAt: time.Now().Add(time.Hour * 24),
 	}
@@ -36,21 +45,21 @@ func SetCookie(w http.ResponseWriter, login string) {
 	http.SetCookie(w, cookie)
 }
 
-func IsValidAuthorization(r *http.Request) bool {
+func (s *UserAuthorizationStore) IsValidAuthorization(r *http.Request) bool {
 	cookie, err := r.Cookie(cookieName)
 	if err != nil {
 		return false
 	}
-	if sessions[cookie.Value].ExpiredAt.Before(time.Now()) {
+	if s.sessions[cookie.Value].ExpiredAt.Before(time.Now()) {
 		return false
 	}
 	return true
 }
 
-func GetUser(r *http.Request) (string, error) {
-	if IsValidAuthorization(r) {
+func (s *UserAuthorizationStore) GetUser(r *http.Request) (string, error) {
+	if s.IsValidAuthorization(r) {
 		cookie, _ := r.Cookie(cookieName)
-		return sessions[cookie.Value].Login, nil
+		return s.sessions[cookie.Value].Login, nil
 	}
 	return "", repository.ErrorUnauthorized
 }
