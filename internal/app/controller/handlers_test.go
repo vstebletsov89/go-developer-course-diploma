@@ -74,7 +74,6 @@ func (s *server) NewTestRouter(controller *Controller) {
 	secure.HandleFunc("/api/user/balance/withdrawals", controller.GetWithdrawals()).Methods(http.MethodGet)
 }
 
-//TODO: add tests for each handler (positive/negative scenarios)
 func TestRegisterHandler(t *testing.T) {
 	type want struct {
 		headerLocation string
@@ -97,11 +96,133 @@ func TestRegisterHandler(t *testing.T) {
 				responseBody:   "",
 			},
 		},
+		{
+			name:     "check RegisterHandler (empty login)",
+			path:     "api/user/register",
+			jsonBody: `{"login": "","password": "pass"}`,
+			want: want{
+				headerLocation: "",
+				statusCode:     http.StatusBadRequest,
+				responseBody:   "",
+			},
+		},
+		{
+			name:     "check RegisterHandler (empty password)",
+			path:     "api/user/register",
+			jsonBody: `{"login": "login","password": ""}`,
+			want: want{
+				headerLocation: "",
+				statusCode:     http.StatusBadRequest,
+				responseBody:   "",
+			},
+		},
+		{
+			name:     "check RegisterHandler (positive test)",
+			path:     "api/user/register",
+			jsonBody: `{"login": "user","password": "topsecret"}`,
+			want: want{
+				headerLocation: "",
+				statusCode:     http.StatusOK,
+				responseBody:   "",
+			},
+		},
+		{
+			name:     "check RegisterHandler (user already exists)",
+			path:     "api/user/register",
+			jsonBody: `{"login": "user","password": "topsecret"}`,
+			want: want{
+				headerLocation: "",
+				statusCode:     http.StatusConflict,
+				responseBody:   "user already exist",
+			},
+		},
 	}
 
 	srv := NewServerTest()
 	ts := httptest.NewServer(srv)
 	defer ts.Close()
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			resp, body := testRequest(t, ts, http.MethodPost, fmt.Sprintf("/%s", tt.path), bytes.NewBufferString(tt.jsonBody))
+			defer resp.Body.Close()
+			assert.Equal(t, tt.want.statusCode, resp.StatusCode)
+			assert.Equal(t, tt.want.responseBody, body)
+			assert.Equal(t, tt.want.headerLocation, resp.Header.Get("Location"))
+		})
+	}
+}
+
+func TestLoginHandler(t *testing.T) {
+	type want struct {
+		headerLocation string
+		statusCode     int
+		responseBody   string
+	}
+	tests := []struct {
+		name     string
+		path     string
+		jsonBody string
+		want     want
+	}{
+		{
+			name:     "check LoginHandler (invalid input)",
+			path:     "api/user/login",
+			jsonBody: `{"": ""}`,
+			want: want{
+				headerLocation: "",
+				statusCode:     http.StatusBadRequest,
+				responseBody:   "",
+			},
+		},
+		{
+			name:     "check LoginHandler (empty login)",
+			path:     "api/user/login",
+			jsonBody: `{"login": "","password": "pass"}`,
+			want: want{
+				headerLocation: "",
+				statusCode:     http.StatusBadRequest,
+				responseBody:   "",
+			},
+		},
+		{
+			name:     "check LoginHandler (empty password)",
+			path:     "api/user/login",
+			jsonBody: `{"login": "login","password": ""}`,
+			want: want{
+				headerLocation: "",
+				statusCode:     http.StatusBadRequest,
+				responseBody:   "",
+			},
+		},
+		{
+			name:     "check LoginHandler (positive test)",
+			path:     "api/user/login",
+			jsonBody: `{"login": "user","password": "topsecret"}`,
+			want: want{
+				headerLocation: "",
+				statusCode:     http.StatusOK,
+				responseBody:   "",
+			},
+		},
+		{
+			name:     "check LoginHandler (incorrect password)",
+			path:     "api/user/login",
+			jsonBody: `{"login": "user","password": "wronpass"}`,
+			want: want{
+				headerLocation: "",
+				statusCode:     http.StatusUnauthorized,
+				responseBody:   "",
+			},
+		},
+	}
+
+	srv := NewServerTest()
+	ts := httptest.NewServer(srv)
+	defer ts.Close()
+
+	// register user
+	testRequest(t, ts, http.MethodPost, fmt.Sprintf("/%s", "api/user/register"), bytes.NewBufferString(`{"login": "user","password": "topsecret"}`))
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
