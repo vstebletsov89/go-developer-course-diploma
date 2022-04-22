@@ -222,7 +222,8 @@ func TestLoginHandler(t *testing.T) {
 	defer ts.Close()
 
 	// register user
-	testRequest(t, ts, http.MethodPost, fmt.Sprintf("/%s", "api/user/register"), bytes.NewBufferString(`{"login": "user","password": "topsecret"}`))
+	r, _ := testRequest(t, ts, http.MethodPost, fmt.Sprintf("/%s", "api/user/register"), bytes.NewBufferString(`{"login": "user","password": "topsecret"}`))
+	defer r.Body.Close()
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
