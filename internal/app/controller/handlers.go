@@ -108,13 +108,13 @@ func (c *Controller) RegisterHandler() http.HandlerFunc {
 		user.Password = encryptedPassword
 
 		err = c.UserRepository.RegisterUser(user)
-		if err != nil && !errors.Is(err, repository.ErrorUserAlreadyExist) {
-			c.Logger.Infof("RegisterUser error: %s", err)
-			WriteError(w, http.StatusInternalServerError, err)
-			return
-		}
 		if errors.Is(err, repository.ErrorUserAlreadyExist) {
 			WriteError(w, http.StatusConflict, err)
+			return
+		}
+		if err != nil {
+			c.Logger.Infof("RegisterUser error: %s", err)
+			WriteError(w, http.StatusInternalServerError, err)
 			return
 		}
 
