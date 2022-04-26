@@ -193,7 +193,7 @@ func (c *Controller) UploadOrder() http.HandlerFunc {
 			return
 		}
 
-		userID, err := c.OrderRepository.GetUserIDByOrderNumber(number)
+		_, err = c.OrderRepository.GetUserIDByOrderNumber(number)
 		if err != nil && !errors.Is(err, repository.ErrorOrderNotFound) {
 			c.Logger.Infof("GetUserByOrderNumber error: %s", err)
 			WriteError(w, http.StatusInternalServerError, err)
@@ -201,6 +201,9 @@ func (c *Controller) UploadOrder() http.HandlerFunc {
 		}
 
 		if errors.Is(err, repository.ErrorOrderNotFound) {
+			userID := c.extractUserID(r)
+			c.Logger.Debugf("UploadOrder: userID '%d'", userID)
+
 			order := &model.Order{
 				Number: number,
 				Status: New,
@@ -264,6 +267,8 @@ func (c *Controller) UpdatePendingOrders(orders []string) error {
 				return err
 			}
 
+			c.Logger.Debugf("GetUserIDByOrderNumber userID '%d'", userID)
+
 			transaction := &model.Transaction{UserID: userID, Order: order.Number, Amount: order.Accrual}
 
 			c.Logger.Debugf("%+v\n", transaction)
@@ -284,6 +289,8 @@ func (c *Controller) GetOrders() http.HandlerFunc {
 		c.Logger.Debug("GetOrders handler")
 
 		userID := c.extractUserID(r)
+		c.Logger.Debugf("GetOrders userID '%d'", userID)
+
 		response, err := c.OrderRepository.GetOrders(userID)
 
 		if errors.Is(err, repository.ErrorOrderNotFound) {
