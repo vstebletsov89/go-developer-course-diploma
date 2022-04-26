@@ -2,7 +2,6 @@ package controller
 
 import (
 	"bytes"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -11,6 +10,7 @@ import (
 	"github.com/theplant/luhn"
 	"go-developer-course-diploma/internal/app/configs"
 	"go-developer-course-diploma/internal/app/model"
+	"go-developer-course-diploma/internal/app/service/auth"
 	"go-developer-course-diploma/internal/app/service/auth/secure"
 	"go-developer-course-diploma/internal/app/storage/repository"
 	"io/ioutil"
@@ -42,10 +42,6 @@ func IsValidOrderNumber(number string) bool {
 		return false
 	}
 	return luhn.Valid(value)
-}
-
-func getPasswordHash(u *model.User) {
-	u.Password = hex.EncodeToString([]byte(u.Password))
 }
 
 type Controller struct {
@@ -103,9 +99,15 @@ func (c *Controller) RegisterHandler() http.HandlerFunc {
 			return
 		}
 
-		getPasswordHash(user)
+		encryptedPassword, err := auth.EncryptPassword(user.Password)
+		if err != nil {
+			c.Logger.Infof("EncryptPassword error: %s", err)
+			WriteError(w, http.StatusInternalServerError, err)
+			return
+		}
+		user.Password = encryptedPassword
 
-		err := c.UserRepository.RegisterUser(user)
+		err = c.UserRepository.RegisterUser(user)
 		if err != nil && !errors.Is(err, repository.ErrorUserAlreadyExist) {
 			c.Logger.Infof("RegisterUser error: %s", err)
 			WriteError(w, http.StatusInternalServerError, err)
@@ -145,9 +147,14 @@ func (c *Controller) LoginHandler() http.HandlerFunc {
 			return
 		}
 
-		getPasswordHash(user)
+		decryptedPassword, err := auth.DecryptPassword(userDB.Password)
+		if err != nil {
+			c.Logger.Infof("DecryptPassword error: %s", err)
+			WriteError(w, http.StatusInternalServerError, err)
+			return
+		}
 
-		if userDB.Login == user.Login && userDB.Password == user.Password {
+		if userDB.Login == user.Login && user.Password == decryptedPassword {
 			c.UserAuthorizationStore.SetCookie(w, user.Login)
 			WriteResponse(w, http.StatusOK, "")
 			return
