@@ -19,7 +19,7 @@ func (r *UserRepository) RegisterUser(u *model.User) (int64, error) {
 		"INSERT INTO users (login, password) VALUES ($1, $2) ON CONFLICT DO NOTHING RETURNING id",
 		u.Login,
 		u.Password,
-	).Scan(u.ID)
+	).Scan(&u.ID)
 
 	if err != nil && err != sql.ErrNoRows {
 		return 0, err
