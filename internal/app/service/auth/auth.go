@@ -5,6 +5,7 @@ import (
 	"go-developer-course-diploma/internal/app/service/auth/secure"
 	"go-developer-course-diploma/internal/app/storage/repository"
 	"net/http"
+	"sync"
 	"time"
 )
 
@@ -19,6 +20,7 @@ type Session struct {
 
 type UserAuthorizationStore struct {
 	sessions map[string]Session
+	mu       sync.RWMutex
 }
 
 func NewUserAuthorizationStore() *UserAuthorizationStore {
@@ -29,10 +31,12 @@ var _ secure.UserAuthorization = (*UserAuthorizationStore)(nil)
 
 func (s *UserAuthorizationStore) SetCookie(w http.ResponseWriter, login string) {
 	sessionID := uuid.NewString()
+	s.mu.Lock()
 	s.sessions[sessionID] = Session{
 		Login:     login,
 		ExpiredAt: time.Now().Add(time.Hour * 24),
 	}
+	s.mu.Unlock()
 
 	cookie := &http.Cookie{
 		Name:  cookieName,
