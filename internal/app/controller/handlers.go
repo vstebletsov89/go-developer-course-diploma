@@ -19,10 +19,10 @@ import (
 )
 
 const (
-	NEW        = "NEW"
-	PROCESSING = "PROCESSING"
-	INVALID    = "INVALID"
-	PROCESSED  = "PROCESSED"
+	New        = "NEW"
+	Processing = "PROCESSING"
+	Invalid    = "INVALID"
+	Processed  = "PROCESSED"
 )
 
 func WriteError(w http.ResponseWriter, code int, err error) {
@@ -33,28 +33,6 @@ func WriteResponse(w http.ResponseWriter, statusCode int, data string) {
 	w.WriteHeader(statusCode)
 	if len(data) != 0 {
 		w.Write([]byte(data))
-	}
-}
-
-func WriteJSON(w http.ResponseWriter, response interface{}, logger *logrus.Logger) {
-	buf := bytes.NewBuffer([]byte{})
-	encoder := json.NewEncoder(buf)
-	err := encoder.Encode(response)
-	if err != nil {
-		logger.Infof("Encoder error: %s", err)
-		WriteError(w, http.StatusInternalServerError, err)
-		return
-	}
-
-	logger.Debugf("WriteJSON response: %s", buf.String())
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-
-	_, err = w.Write(buf.Bytes())
-	if err != nil {
-		WriteError(w, http.StatusInternalServerError, err)
-		return
 	}
 }
 
@@ -87,6 +65,28 @@ func NewController(cfg *configs.Config, logger *logrus.Logger, userStore reposit
 		OrderRepository:        orderStore,
 		TransactionRepository:  transactionStore,
 		UserAuthorizationStore: userAuthorizationStore,
+	}
+}
+
+func (c *Controller) WriteJSON(w http.ResponseWriter, response interface{}) {
+	buf := bytes.NewBuffer([]byte{})
+	encoder := json.NewEncoder(buf)
+	err := encoder.Encode(response)
+	if err != nil {
+		c.Logger.Infof("Encoder error: %s", err)
+		WriteError(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	c.Logger.Debugf("WriteJSON response: %s", buf.String())
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+
+	_, err = w.Write(buf.Bytes())
+	if err != nil {
+		WriteError(w, http.StatusInternalServerError, err)
+		return
 	}
 }
 
@@ -190,7 +190,7 @@ func (c *Controller) UploadOrder() http.HandlerFunc {
 		if errors.Is(err, repository.ErrorOrderNotFound) {
 			order := &model.Order{
 				Number: number,
-				Status: NEW,
+				Status: New,
 				Login:  user,
 			}
 
@@ -239,7 +239,7 @@ func (c *Controller) UpdatePendingOrders(orders []string) error {
 		}
 		defer resp.Body.Close()
 
-		if order.Status == PROCESSED {
+		if order.Status == Processed {
 			// set order.Number because response from accrual has 'order' field instead of 'number'
 			order.Number = o
 			c.Logger.Debugf("Updated order '%s' status '%s' accrual '%f' : \n", order.Number, order.Status, order.Accrual)
@@ -293,7 +293,7 @@ func (c *Controller) GetOrders() http.HandlerFunc {
 			return
 		}
 
-		WriteJSON(w, response, c.Logger)
+		c.WriteJSON(w, response)
 	}
 }
 
@@ -324,7 +324,7 @@ func (c *Controller) GetCurrentBalance() http.HandlerFunc {
 			Withdrawn: withdrawn,
 		}
 
-		WriteJSON(w, response, c.Logger)
+		c.WriteJSON(w, response)
 	}
 }
 
@@ -399,6 +399,6 @@ func (c *Controller) GetWithdrawals() http.HandlerFunc {
 			return
 		}
 
-		WriteJSON(w, response, c.Logger)
+		c.WriteJSON(w, response)
 	}
 }
