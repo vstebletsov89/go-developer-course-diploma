@@ -127,6 +127,7 @@ func (c *Controller) RegisterHandler() http.HandlerFunc {
 			return
 		}
 
+		c.Logger.Infof("RegisterUser userID: '%d'", userID)
 		c.UserAuthorizationStore.SetCookie(w, userID)
 		WriteResponse(w, http.StatusOK, "")
 	}
@@ -164,7 +165,9 @@ func (c *Controller) LoginHandler() http.HandlerFunc {
 		}
 
 		if userDB.Login == user.Login && user.Password == decryptedPassword {
-			c.UserAuthorizationStore.SetCookie(w, user.ID)
+			// debug userDB
+			c.Logger.Debugf("%+v\n\n", userDB)
+			c.UserAuthorizationStore.SetCookie(w, userDB.ID)
 			WriteResponse(w, http.StatusOK, "")
 			return
 		}
