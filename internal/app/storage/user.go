@@ -14,20 +14,20 @@ func NewUserRepository(conn *sql.DB) *UserRepository {
 	return &UserRepository{conn: conn}
 }
 
-func (r *UserRepository) RegisterUser(u *model.User) error {
+func (r *UserRepository) RegisterUser(u *model.User) (int64, error) {
 	err := r.conn.QueryRow(
 		"INSERT INTO users (login, password) VALUES ($1, $2) ON CONFLICT DO NOTHING RETURNING id",
 		u.Login,
 		u.Password,
-	).Scan(&u.ID)
+	).Scan(u.ID)
 
 	if err != nil && err != sql.ErrNoRows {
-		return err
+		return 0, err
 	}
 	if err == sql.ErrNoRows {
-		return repository.ErrorUserAlreadyExist
+		return 0, repository.ErrorUserAlreadyExist
 	}
-	return nil
+	return u.ID, nil
 }
 
 func (r *UserRepository) GetUser(login string) (*model.User, error) {

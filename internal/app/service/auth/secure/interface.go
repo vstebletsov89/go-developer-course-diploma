@@ -5,7 +5,7 @@ import (
 )
 
 type UserAuthorization interface {
-	SetCookie(w http.ResponseWriter, login string)
+	SetCookie(w http.ResponseWriter, userID int64)
 	IsValidAuthorization(r *http.Request) bool
-	GetUser(r *http.Request) (string, error)
+	GetUserID(r *http.Request) (int64, error)
 }

@@ -16,8 +16,8 @@ func NewTransactionRepository(conn *sql.DB) *TransactionRepository {
 
 func (r *TransactionRepository) ExecuteTransaction(t *model.Transaction) error {
 	err := r.conn.QueryRow(
-		"INSERT INTO transactions (login, number, amount, processed_at) VALUES ($1, $2, $3, NOW()) RETURNING id",
-		t.Login,
+		"INSERT INTO transactions (user_id, number, amount, processed_at) VALUES ($1, $2, $3, NOW()) RETURNING id",
+		t.UserID,
 		t.Order,
 		t.Amount,
 	).Scan(&t.ID)
@@ -28,12 +28,12 @@ func (r *TransactionRepository) ExecuteTransaction(t *model.Transaction) error {
 	return nil
 }
 
-func (r *TransactionRepository) GetCurrentBalance(login string) (float64, error) {
+func (r *TransactionRepository) GetCurrentBalance(userID int64) (float64, error) {
 	var balance *float64
 
 	err := r.conn.QueryRow(
-		"SELECT sum(amount) from transactions where login = $1",
-		login,
+		"SELECT sum(amount) from transactions where user_id = $1",
+		userID,
 	).Scan(&balance)
 
 	if err != nil {
@@ -43,11 +43,11 @@ func (r *TransactionRepository) GetCurrentBalance(login string) (float64, error)
 	return *balance, nil
 }
 
-func (r *TransactionRepository) GetWithdrawnAmount(login string) (float64, error) {
+func (r *TransactionRepository) GetWithdrawnAmount(userID int64) (float64, error) {
 	var count *float64
 	err := r.conn.QueryRow(
-		"SELECT count(amount) from transactions where login = $1 AND amount < 0",
-		login,
+		"SELECT count(amount) from transactions where user_id = $1 AND amount < 0",
+		userID,
 	).Scan(&count)
 
 	if err != nil {
@@ -57,8 +57,8 @@ func (r *TransactionRepository) GetWithdrawnAmount(login string) (float64, error
 	var amount *float64
 	if *count > 0 {
 		err := r.conn.QueryRow(
-			"SELECT sum(amount) from transactions where login = $1 AND amount < 0",
-			login,
+			"SELECT sum(amount) from transactions where user_id = $1 AND amount < 0",
+			userID,
 		).Scan(&amount)
 
 		if err != nil {
@@ -71,11 +71,11 @@ func (r *TransactionRepository) GetWithdrawnAmount(login string) (float64, error
 	return *amount * -1, nil
 }
 
-func (r *TransactionRepository) GetWithdrawals(login string) ([]*model.Transaction, error) {
+func (r *TransactionRepository) GetWithdrawals(userID int64) ([]*model.Transaction, error) {
 	var transactions []*model.Transaction
 	rows, err := r.conn.Query(
-		"SELECT order, amount, processed_at FROM transactions WHERE login = $1",
-		login,
+		"SELECT number, amount, processed_at FROM transactions WHERE user_id = $1",
+		userID,
 	)
 	if err != nil {
 		return nil, err

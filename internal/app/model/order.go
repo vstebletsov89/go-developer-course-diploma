@@ -4,7 +4,7 @@ import "time"
 
 type Order struct {
 	ID         int       `json:"-"`
-	Login      string    `json:"-"`
+	UserID     int64     `json:"-"`
 	Number     string    `json:"number"`
 	Status     string    `json:"status"`
 	Accrual    float64   `json:"accrual,omitempty"`

@@ -64,6 +64,15 @@ func NewController(cfg *configs.Config, logger *logrus.Logger, userStore reposit
 	}
 }
 
+func (c *Controller) extractUserID(r *http.Request) int64 {
+	userID, ok := r.Context().Value(auth.UserIDCtx).(int64)
+	if ok {
+		c.Logger.Infof("userID (context): '%d'", userID)
+		return userID
+	}
+	return 0
+}
+
 func (c *Controller) WriteJSON(w http.ResponseWriter, response interface{}) {
 	buf := bytes.NewBuffer([]byte{})
 	encoder := json.NewEncoder(buf)
@@ -107,7 +116,7 @@ func (c *Controller) RegisterHandler() http.HandlerFunc {
 		}
 		user.Password = encryptedPassword
 
-		err = c.UserRepository.RegisterUser(user)
+		userID, err := c.UserRepository.RegisterUser(user)
 		if errors.Is(err, repository.ErrorUserAlreadyExist) {
 			WriteError(w, http.StatusConflict, err)
 			return
@@ -118,7 +127,7 @@ func (c *Controller) RegisterHandler() http.HandlerFunc {
 			return
 		}
 
-		c.UserAuthorizationStore.SetCookie(w, user.Login)
+		c.UserAuthorizationStore.SetCookie(w, userID)
 		WriteResponse(w, http.StatusOK, "")
 	}
 }
@@ -137,13 +146,13 @@ func (c *Controller) LoginHandler() http.HandlerFunc {
 		}
 
 		userDB, err := c.UserRepository.GetUser(user.Login)
-		if err != nil && !errors.Is(err, repository.ErrorUserNotFound) {
-			c.Logger.Infof("GetUser error: %s", err)
-			WriteError(w, http.StatusInternalServerError, err)
-			return
-		}
 		if errors.Is(err, repository.ErrorUserNotFound) {
 			WriteError(w, http.StatusUnauthorized, err)
+			return
+		}
+		if err != nil {
+			c.Logger.Infof("GetUser error: %s", err)
+			WriteError(w, http.StatusInternalServerError, err)
 			return
 		}
 
@@ -155,7 +164,7 @@ func (c *Controller) LoginHandler() http.HandlerFunc {
 		}
 
 		if userDB.Login == user.Login && user.Password == decryptedPassword {
-			c.UserAuthorizationStore.SetCookie(w, user.Login)
+			c.UserAuthorizationStore.SetCookie(w, user.ID)
 			WriteResponse(w, http.StatusOK, "")
 			return
 		}
@@ -181,13 +190,7 @@ func (c *Controller) UploadOrder() http.HandlerFunc {
 			return
 		}
 
-		user, err := c.UserAuthorizationStore.GetUser(r)
-		if err != nil {
-			WriteError(w, http.StatusInternalServerError, err)
-			return
-		}
-
-		userDB, err := c.OrderRepository.GetUserByOrderNumber(number)
+		userID, err := c.OrderRepository.GetUserIDByOrderNumber(number)
 		if err != nil && !errors.Is(err, repository.ErrorOrderNotFound) {
 			c.Logger.Infof("GetUserByOrderNumber error: %s", err)
 			WriteError(w, http.StatusInternalServerError, err)
@@ -198,7 +201,7 @@ func (c *Controller) UploadOrder() http.HandlerFunc {
 			order := &model.Order{
 				Number: number,
 				Status: New,
-				Login:  user,
+				UserID: userID,
 			}
 
 			err := c.OrderRepository.UploadOrder(order)
@@ -213,11 +216,6 @@ func (c *Controller) UploadOrder() http.HandlerFunc {
 			go c.UpdatePendingOrders(append(numbers, number))
 
 			WriteResponse(w, http.StatusAccepted, "")
-			return
-		}
-
-		if userDB == user {
-			WriteResponse(w, http.StatusOK, "")
 			return
 		}
 
@@ -257,13 +255,13 @@ func (c *Controller) UpdatePendingOrders(orders []string) error {
 			}
 
 			// get current user and accumulate balance
-			userDB, err := c.OrderRepository.GetUserByOrderNumber(order.Number)
+			userID, err := c.OrderRepository.GetUserIDByOrderNumber(order.Number)
 			if err != nil {
-				c.Logger.Infof("GetUserByOrderNumber error: %s", err)
+				c.Logger.Infof("GetUserIDByOrderNumber error: %s", err)
 				return err
 			}
 
-			transaction := &model.Transaction{Login: userDB, Order: order.Number, Amount: order.Accrual}
+			transaction := &model.Transaction{UserID: userID, Order: order.Number, Amount: order.Accrual}
 
 			c.Logger.Debugf("%+v\n", transaction)
 
@@ -281,22 +279,18 @@ func (c *Controller) UpdatePendingOrders(orders []string) error {
 func (c *Controller) GetOrders() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		c.Logger.Debug("GetOrders handler")
-		user, err := c.UserAuthorizationStore.GetUser(r)
-		if err != nil {
-			c.Logger.Infof("GetUser error: %s", err)
-			WriteError(w, http.StatusInternalServerError, err)
-			return
-		}
 
-		response, err := c.OrderRepository.GetOrders(user)
-		if err != nil && !errors.Is(err, repository.ErrorOrderNotFound) {
-			c.Logger.Infof("GetOrders error: %s", err)
-			WriteError(w, http.StatusInternalServerError, err)
-			return
-		}
+		userID := c.extractUserID(r)
+		response, err := c.OrderRepository.GetOrders(userID)
+
 		if errors.Is(err, repository.ErrorOrderNotFound) {
 			c.Logger.Infof("GetOrders error: %s", err)
 			WriteError(w, http.StatusNoContent, err)
+			return
+		}
+		if err != nil {
+			c.Logger.Infof("GetOrders error: %s", err)
+			WriteError(w, http.StatusInternalServerError, err)
 			return
 		}
 
@@ -307,20 +301,15 @@ func (c *Controller) GetOrders() http.HandlerFunc {
 func (c *Controller) GetCurrentBalance() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		c.Logger.Debug("GetCurrentBalance handler")
-		user, err := c.UserAuthorizationStore.GetUser(r)
-		if err != nil {
-			WriteError(w, http.StatusInternalServerError, err)
-			return
-		}
-
-		balance, err := c.TransactionRepository.GetCurrentBalance(user)
+		userID := c.extractUserID(r)
+		balance, err := c.TransactionRepository.GetCurrentBalance(userID)
 		if err != nil {
 			c.Logger.Infof("GetCurrentBalance error: %s", err)
 			WriteError(w, http.StatusInternalServerError, err)
 			return
 		}
 
-		withdrawn, err := c.TransactionRepository.GetWithdrawnAmount(user)
+		withdrawn, err := c.TransactionRepository.GetWithdrawnAmount(userID)
 		if err != nil {
 			WriteError(w, http.StatusInternalServerError, err)
 			return
@@ -354,13 +343,9 @@ func (c *Controller) WithdrawLoyaltyPoints() http.HandlerFunc {
 			return
 		}
 
-		user, err := c.UserAuthorizationStore.GetUser(r)
-		if err != nil {
-			WriteError(w, http.StatusInternalServerError, err)
-			return
-		}
+		userID := c.extractUserID(r)
 
-		balance, err := c.TransactionRepository.GetCurrentBalance(user)
+		balance, err := c.TransactionRepository.GetCurrentBalance(userID)
 		if err != nil {
 			c.Logger.Infof("GetCurrentBalance error: %s", err)
 			WriteError(w, http.StatusInternalServerError, err)
@@ -372,7 +357,7 @@ func (c *Controller) WithdrawLoyaltyPoints() http.HandlerFunc {
 			return
 		}
 
-		withdraw.Login = user
+		withdraw.UserID = userID
 		withdraw.Amount = -1 * withdraw.Amount
 
 		if err := c.TransactionRepository.ExecuteTransaction(withdraw); err != nil {
@@ -388,19 +373,15 @@ func (c *Controller) WithdrawLoyaltyPoints() http.HandlerFunc {
 func (c *Controller) GetWithdrawals() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		c.Logger.Debug("GetWithdrawals handler")
-		user, err := c.UserAuthorizationStore.GetUser(r)
-		if err != nil {
-			WriteError(w, http.StatusInternalServerError, err)
-			return
-		}
+		userID := c.extractUserID(r)
 
-		response, err := c.TransactionRepository.GetWithdrawals(user)
-		if err != nil && !errors.Is(err, repository.ErrorWithdrawalNotFound) {
+		response, err := c.TransactionRepository.GetWithdrawals(userID)
+		if errors.Is(err, repository.ErrorWithdrawalNotFound) {
 			c.Logger.Infof("GetWithdrawals error: %s", err)
 			WriteError(w, http.StatusInternalServerError, err)
 			return
 		}
-		if errors.Is(err, repository.ErrorWithdrawalNotFound) {
+		if err != nil {
 			c.Logger.Infof("GetWithdrawals error: %s", err)
 			WriteError(w, http.StatusInternalServerError, err)
 			return

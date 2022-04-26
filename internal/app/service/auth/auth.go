@@ -9,12 +9,15 @@ import (
 	"time"
 )
 
+type UserContextType int64
+
 const (
-	cookieName = "gophermart"
+	cookieName                 = "gophermart"
+	UserIDCtx  UserContextType = 0
 )
 
 type Session struct {
-	Login     string
+	UserID    int64
 	ExpiredAt time.Time
 }
 
@@ -29,11 +32,11 @@ func NewUserAuthorizationStore() *UserAuthorizationStore {
 
 var _ secure.UserAuthorization = (*UserAuthorizationStore)(nil)
 
-func (s *UserAuthorizationStore) SetCookie(w http.ResponseWriter, login string) {
+func (s *UserAuthorizationStore) SetCookie(w http.ResponseWriter, userID int64) {
 	sessionID := uuid.NewString()
 	s.mu.Lock()
 	s.sessions[sessionID] = Session{
-		Login:     login,
+		UserID:    userID,
 		ExpiredAt: time.Now().Add(time.Hour * 24),
 	}
 	s.mu.Unlock()
@@ -56,13 +59,13 @@ func (s *UserAuthorizationStore) IsValidAuthorization(r *http.Request) bool {
 	return true
 }
 
-func (s *UserAuthorizationStore) GetUser(r *http.Request) (string, error) {
+func (s *UserAuthorizationStore) GetUserID(r *http.Request) (int64, error) {
 	if s.IsValidAuthorization(r) {
 		cookie, err := r.Cookie(cookieName)
 		if err != nil {
-			return "", err
+			return 0, err
 		}
-		return s.sessions[cookie.Value].Login, nil
+		return s.sessions[cookie.Value].UserID, nil
 	}
-	return "", repository.ErrorUnauthorized
+	return 0, repository.ErrorUnauthorized
 }

@@ -12,21 +12,21 @@ var ErrorOrderNotFound = errors.New("order not found")
 var ErrorWithdrawalNotFound = errors.New("withdrawal not found")
 
 type UserRepository interface {
-	RegisterUser(*model.User) error
+	RegisterUser(*model.User) (int64, error)
 	GetUser(string) (*model.User, error)
 }
 
 type OrderRepository interface {
 	UploadOrder(*model.Order) error
-	GetOrders(string) ([]*model.Order, error)
-	GetUserByOrderNumber(string) (string, error)
+	GetOrders(int64) ([]*model.Order, error)
+	GetUserIDByOrderNumber(string) (int64, error)
 	UpdateOrderStatus(*model.Order) error
 	GetPendingOrders() ([]string, error)
 }
 
 type TransactionRepository interface {
-	ExecuteTransaction(transaction *model.Transaction) error
-	GetCurrentBalance(string) (float64, error)
-	GetWithdrawnAmount(string) (float64, error)
-	GetWithdrawals(string) ([]*model.Transaction, error)
+	ExecuteTransaction(*model.Transaction) error
+	GetCurrentBalance(int64) (float64, error)
+	GetWithdrawnAmount(int64) (float64, error)
+	GetWithdrawals(int64) ([]*model.Transaction, error)
 }

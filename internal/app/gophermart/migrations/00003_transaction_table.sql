@@ -2,7 +2,7 @@
 -- +goose StatementBegin
 CREATE TABLE IF NOT EXISTS "transactions" (
     id bigserial NOT NULL PRIMARY KEY,
-    login text NOT NULL,
+    user_id bigint NOT NULL,
     number bigserial NOT NULL,
     amount numeric DEFAULT 0,
     processed_at timestamptz NOT NULL

@@ -16,10 +16,10 @@ func NewOrderRepository(conn *sql.DB) *OrderRepository {
 
 func (r *OrderRepository) UploadOrder(o *model.Order) error {
 	err := r.conn.QueryRow(
-		"INSERT INTO orders (number, status, login, uploaded_at) VALUES ($1, $2, $3, NOW()) ON CONFLICT DO NOTHING RETURNING id",
+		"INSERT INTO orders (number, status, user_id, uploaded_at) VALUES ($1, $2, $3, NOW()) ON CONFLICT DO NOTHING RETURNING id",
 		o.Number,
 		o.Status,
-		o.Login,
+		o.UserID,
 	).Scan(&o.ID)
 
 	if err != nil {
@@ -29,20 +29,20 @@ func (r *OrderRepository) UploadOrder(o *model.Order) error {
 	return nil
 }
 
-func (r *OrderRepository) GetUserByOrderNumber(number string) (string, error) {
-	var user *string
+func (r *OrderRepository) GetUserIDByOrderNumber(number string) (int64, error) {
+	var user *int64
 	err := r.conn.QueryRow(
-		"SELECT login FROM orders WHERE number = $1",
+		"SELECT user_id FROM orders WHERE number = $1",
 		number,
 	).Scan(
 		&user,
 	)
 
 	if err != nil && err != sql.ErrNoRows {
-		return "", err
+		return 0, err
 	}
 	if err == sql.ErrNoRows {
-		return "", repository.ErrorOrderNotFound
+		return 0, repository.ErrorOrderNotFound
 	}
 
 	return *user, nil
@@ -76,12 +76,12 @@ func (r *OrderRepository) GetPendingOrders() ([]string, error) {
 	return orders, nil
 }
 
-func (r *OrderRepository) GetOrders(login string) ([]*model.Order, error) {
+func (r *OrderRepository) GetOrders(userID int64) ([]*model.Order, error) {
 	var orders []*model.Order
 
 	rows, err := r.conn.Query(
-		"SELECT number, status, accrual, uploaded_at FROM orders WHERE login = $1 ORDER BY uploaded_at",
-		login,
+		"SELECT number, status, accrual, uploaded_at FROM orders WHERE user_id = $1 ORDER BY uploaded_at",
+		userID,
 	)
 
 	if err != nil {

@@ -2,7 +2,7 @@
 -- +goose StatementBegin
 CREATE TABLE IF NOT EXISTS "orders" (
     id bigserial NOT NULL PRIMARY KEY,
-    login text NOT NULL,
+    user_id bigint NOT NULL,
     number text NOT NULL UNIQUE,
     status text NOT NULL,
     accrual numeric DEFAULT 0,

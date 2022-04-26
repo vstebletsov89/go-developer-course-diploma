@@ -15,7 +15,7 @@ func NewMockUserAuthorizationStore() *MockUserAuthorizationStore {
 	return &MockUserAuthorizationStore{}
 }
 
-func (m *MockUserAuthorizationStore) SetCookie(w http.ResponseWriter, login string) {
+func (m *MockUserAuthorizationStore) SetCookie(w http.ResponseWriter, userID int64) {
 	// do nothing
 }
 
@@ -23,7 +23,7 @@ func (m *MockUserAuthorizationStore) IsValidAuthorization(r *http.Request) bool 
 	return true
 }
 
-func (m *MockUserAuthorizationStore) GetUser(r *http.Request) (string, error) {
-	// return hardcoded user for tests
-	return "mockuser", nil
+func (m *MockUserAuthorizationStore) GetUserID(r *http.Request) (int64, error) {
+	// return hardcoded userID for tests
+	return 999, nil
 }
