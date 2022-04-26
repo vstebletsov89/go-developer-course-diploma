@@ -1,9 +1,9 @@
 package auth
 
 import (
+	"github.com/google/uuid"
 	"go-developer-course-diploma/internal/app/service/auth/secure"
 	"go-developer-course-diploma/internal/app/storage/repository"
-	"math/rand"
 	"net/http"
 	"time"
 )
@@ -17,10 +17,6 @@ type Session struct {
 	ExpiredAt time.Time
 }
 
-func init() {
-	rand.Seed(time.Now().UnixNano())
-}
-
 type UserAuthorizationStore struct {
 	sessions map[string]Session
 }
@@ -32,7 +28,7 @@ func NewUserAuthorizationStore() *UserAuthorizationStore {
 var _ secure.UserAuthorization = (*UserAuthorizationStore)(nil)
 
 func (s *UserAuthorizationStore) SetCookie(w http.ResponseWriter, login string) {
-	sessionID := generateRandomString()
+	sessionID := uuid.NewString()
 	s.sessions[sessionID] = Session{
 		Login:     login,
 		ExpiredAt: time.Now().Add(time.Hour * 24),
@@ -58,18 +54,11 @@ func (s *UserAuthorizationStore) IsValidAuthorization(r *http.Request) bool {
 
 func (s *UserAuthorizationStore) GetUser(r *http.Request) (string, error) {
 	if s.IsValidAuthorization(r) {
-		cookie, _ := r.Cookie(cookieName)
+		cookie, err := r.Cookie(cookieName)
+		if err != nil {
+			return "", err
+		}
 		return s.sessions[cookie.Value].Login, nil
 	}
 	return "", repository.ErrorUnauthorized
-}
-
-func generateRandomString() string {
-	var letterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
-
-	b := make([]rune, 20)
-	for i := range b {
-		b[i] = letterRunes[rand.Intn(len(letterRunes))]
-	}
-	return string(b)
 }
