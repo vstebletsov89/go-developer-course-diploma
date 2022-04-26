@@ -193,17 +193,17 @@ func (c *Controller) UploadOrder() http.HandlerFunc {
 			return
 		}
 
-		_, err = c.OrderRepository.GetUserIDByOrderNumber(number)
+		userDB, err := c.OrderRepository.GetUserIDByOrderNumber(number)
 		if err != nil && !errors.Is(err, repository.ErrorOrderNotFound) {
 			c.Logger.Infof("GetUserByOrderNumber error: %s", err)
 			WriteError(w, http.StatusInternalServerError, err)
 			return
 		}
 
-		if errors.Is(err, repository.ErrorOrderNotFound) {
-			userID := c.extractUserID(r)
-			c.Logger.Debugf("UploadOrder: userID '%d'", userID)
+		userID := c.extractUserID(r)
+		c.Logger.Debugf("UploadOrder: userID '%d'", userID)
 
+		if errors.Is(err, repository.ErrorOrderNotFound) {
 			order := &model.Order{
 				Number: number,
 				Status: New,
@@ -222,6 +222,11 @@ func (c *Controller) UploadOrder() http.HandlerFunc {
 			go c.UpdatePendingOrders(append(numbers, number))
 
 			WriteResponse(w, http.StatusAccepted, "")
+			return
+		}
+
+		if userDB == userID {
+			WriteResponse(w, http.StatusOK, "")
 			return
 		}
 
