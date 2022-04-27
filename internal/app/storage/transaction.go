@@ -44,28 +44,18 @@ func (r *TransactionRepository) GetCurrentBalance(userID int64) (float64, error)
 }
 
 func (r *TransactionRepository) GetWithdrawnAmount(userID int64) (float64, error) {
-	var count *float64
+	var amount *float64
 	err := r.conn.QueryRow(
-		"SELECT count(amount) from transactions where user_id = $1 AND amount < 0",
+		"SELECT sum(amount) from transactions where user_id = $1 AND amount < 0",
 		userID,
-	).Scan(&count)
+	).Scan(&amount)
+
+	if err == sql.ErrNoRows {
+		return 0, nil
+	}
 
 	if err != nil {
 		return 0, err
-	}
-
-	var amount *float64
-	if *count > 0 {
-		err := r.conn.QueryRow(
-			"SELECT sum(amount) from transactions where user_id = $1 AND amount < 0",
-			userID,
-		).Scan(&amount)
-
-		if err != nil {
-			return 0, err
-		}
-	} else {
-		return 0, nil
 	}
 
 	return *amount * -1, nil
