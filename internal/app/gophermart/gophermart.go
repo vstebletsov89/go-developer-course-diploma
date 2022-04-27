@@ -12,7 +12,6 @@ import (
 	"go-developer-course-diploma/internal/app/server"
 	"go-developer-course-diploma/internal/app/service/auth"
 	"go-developer-course-diploma/internal/app/storage"
-	"log"
 	"net/http"
 	"time"
 )
@@ -29,7 +28,7 @@ func RunApp(cfg *configs.Config) error {
 	})
 	level, err := logrus.ParseLevel(cfg.LogLevel)
 	if err != nil {
-		log.Fatal("Failed to parse log level")
+		return err
 	}
 	logger.SetLevel(level)
 
@@ -55,8 +54,11 @@ func RunApp(cfg *configs.Config) error {
 	userAuthStore := auth.NewUserAuthorizationStore()
 	c := controller.NewController(cfg, logger, userStore, orderStore, transactionStore, userAuthStore)
 
+	// create accrual provider
+	p := accrual.NewAccrualClient(cfg, logger, orderStore, transactionStore)
+
 	// check pending orders
-	go accrual.UpdatePendingOrders(c, context.Background())
+	go p.CheckPendingOrders(context.Background())
 
 	srv := server.NewServer(c)
 	return http.ListenAndServe(cfg.RunAddress, srv)

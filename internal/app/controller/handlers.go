@@ -4,10 +4,10 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"fmt"
 	_ "github.com/lib/pq"
 	"github.com/sirupsen/logrus"
 	"github.com/theplant/luhn"
+	"go-developer-course-diploma/internal/app/accrual"
 	"go-developer-course-diploma/internal/app/configs"
 	"go-developer-course-diploma/internal/app/model"
 	"go-developer-course-diploma/internal/app/service/auth"
@@ -16,13 +16,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strconv"
-)
-
-const (
-	New        = "NEW"
-	Processing = "PROCESSING"
-	Invalid    = "INVALID"
-	Processed  = "PROCESSED"
 )
 
 func WriteError(w http.ResponseWriter, code int, err error) {
@@ -206,7 +199,7 @@ func (c *Controller) UploadOrder() http.HandlerFunc {
 		if errors.Is(err, repository.ErrorOrderNotFound) {
 			order := &model.Order{
 				Number: number,
-				Status: New,
+				Status: accrual.New,
 				UserID: userID,
 			}
 
@@ -216,10 +209,6 @@ func (c *Controller) UploadOrder() http.HandlerFunc {
 				WriteError(w, http.StatusInternalServerError, err)
 				return
 			}
-
-			// try to get loyalty points in goroutine
-			var numbers []string
-			go c.UpdatePendingOrders(append(numbers, number))
 
 			WriteResponse(w, http.StatusAccepted, "")
 			return
@@ -233,60 +222,6 @@ func (c *Controller) UploadOrder() http.HandlerFunc {
 		// process error when same order number was processed by another user
 		WriteResponse(w, http.StatusConflict, "")
 	}
-}
-
-func (c *Controller) UpdatePendingOrders(orders []string) error {
-	c.Logger.Debug("UpdatePendingOrders: start")
-	for _, o := range orders {
-		link := fmt.Sprintf("%s/api/orders/%s", c.Config.AccrualSystemAddress, o)
-		req, err := http.NewRequest(http.MethodGet, link, nil)
-		if err != nil {
-			return err
-		}
-
-		resp, err := http.DefaultClient.Do(req)
-		if err != nil {
-			return err
-		}
-
-		var order *model.Order
-		if err := json.NewDecoder(resp.Body).Decode(&order); err != nil {
-			return err
-		}
-		defer resp.Body.Close()
-
-		if order.Status == Processed {
-			// set order.Number because response from accrual has 'order' field instead of 'number'
-			order.Number = o
-			c.Logger.Debugf("Updated order '%s' status '%s' accrual '%f' : \n", order.Number, order.Status, order.Accrual)
-
-			if err := c.OrderRepository.UpdateOrderStatus(order); err != nil {
-				c.Logger.Infof("UpdateOrderStatus error: %s", err)
-				return err
-			}
-
-			// get current user and accumulate balance
-			userID, err := c.OrderRepository.GetUserIDByOrderNumber(order.Number)
-			if err != nil {
-				c.Logger.Infof("GetUserIDByOrderNumber error: %s", err)
-				return err
-			}
-
-			c.Logger.Debugf("GetUserIDByOrderNumber userID '%d'", userID)
-
-			transaction := &model.Transaction{UserID: userID, Order: order.Number, Amount: order.Accrual}
-
-			c.Logger.Debugf("%+v\n", transaction)
-
-			if err := c.TransactionRepository.ExecuteTransaction(transaction); err != nil {
-				c.Logger.Infof("ExecuteTransaction error: %s", err)
-				return err
-			}
-		}
-	}
-
-	c.Logger.Debug("UpdatePendingOrders: end")
-	return nil
 }
 
 func (c *Controller) GetOrders() http.HandlerFunc {
