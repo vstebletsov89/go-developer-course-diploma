@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"go-developer-course-diploma/internal/app/model"
 	"go-developer-course-diploma/internal/app/storage/repository"
+	"log"
 )
 
 type TransactionRepository struct {
@@ -45,19 +46,20 @@ func (r *TransactionRepository) GetCurrentBalance(userID int64) (float64, error)
 
 func (r *TransactionRepository) GetWithdrawnAmount(userID int64) (float64, error) {
 	var amount *float64
+	log.Printf("GetWithdrawnAmount userID '%d'", userID)
 	err := r.conn.QueryRow(
 		"SELECT sum(amount) from transactions where user_id = $1 AND amount < 0",
 		userID,
 	).Scan(&amount)
-
+	log.Printf("GetWithdrawnAmount userID scan is okay")
 	if err == sql.ErrNoRows {
 		return 0, nil
 	}
-
+	log.Printf("GetWithdrawnAmount userID: 2")
 	if err != nil {
 		return 0, err
 	}
-
+	log.Printf("GetWithdrawnAmount userID: 3")
 	return *amount * -1, nil
 }
 

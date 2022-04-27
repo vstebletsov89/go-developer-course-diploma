@@ -323,7 +323,7 @@ func (c *Controller) GetCurrentBalance() http.HandlerFunc {
 			WriteError(w, http.StatusInternalServerError, err)
 			return
 		}
-
+		c.Logger.Debug("GetWithdrawnAmount repository")
 		withdrawn, err := c.TransactionRepository.GetWithdrawnAmount(userID)
 		if err != nil {
 			WriteError(w, http.StatusInternalServerError, err)
