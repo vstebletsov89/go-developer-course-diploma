@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"github.com/sirupsen/logrus"
 	"go-developer-course-diploma/internal/configs"
-	model2 "go-developer-course-diploma/internal/model"
+	"go-developer-course-diploma/internal/model"
 	"go-developer-course-diploma/internal/storage/repository"
 	"net/http"
 	"time"
@@ -50,7 +50,7 @@ func (c *Client) UpdatePendingOrders(orders []string) error {
 			return err
 		}
 
-		var order *model2.Order
+		var order *model.Order
 		if err := json.NewDecoder(resp.Body).Decode(&order); err != nil {
 			return err
 		}
@@ -75,7 +75,7 @@ func (c *Client) UpdatePendingOrders(orders []string) error {
 
 			c.Logger.Debugf("GetUserIDByOrderNumber userID '%d'", userID)
 
-			transaction := &model2.Transaction{UserID: userID, Order: order.Number, Amount: order.Accrual}
+			transaction := &model.Transaction{UserID: userID, Order: order.Number, Amount: order.Accrual}
 
 			c.Logger.Debugf("%+v\n", transaction)
 
