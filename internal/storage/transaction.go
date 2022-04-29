@@ -2,8 +2,8 @@ package storage
 
 import (
 	"database/sql"
-	"go-developer-course-diploma/internal/app/model"
-	"go-developer-course-diploma/internal/app/storage/repository"
+	"go-developer-course-diploma/internal/model"
+	"go-developer-course-diploma/internal/storage/repository"
 )
 
 type TransactionRepository struct {

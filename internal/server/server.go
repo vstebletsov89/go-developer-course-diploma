@@ -2,8 +2,8 @@ package server
 
 import (
 	"github.com/gorilla/mux"
-	"go-developer-course-diploma/internal/app/controller"
-	"go-developer-course-diploma/internal/app/service/auth"
+	"go-developer-course-diploma/internal/controller"
+	"go-developer-course-diploma/internal/service/auth"
 	"net/http"
 )
 

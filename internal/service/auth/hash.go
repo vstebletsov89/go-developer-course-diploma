@@ -1,7 +1,7 @@
 package auth
 
 import (
-	"go-developer-course-diploma/internal/app/model"
+	"go-developer-course-diploma/internal/model"
 	"golang.org/x/crypto/bcrypt"
 )
 

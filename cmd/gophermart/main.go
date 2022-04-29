@@ -1,8 +1,8 @@
 package main
 
 import (
-	"go-developer-course-diploma/internal/app/configs"
-	"go-developer-course-diploma/internal/app/gophermart"
+	"go-developer-course-diploma/internal/configs"
+	"go-developer-course-diploma/internal/gophermart"
 	"log"
 )
 

@@ -2,7 +2,7 @@ package auth
 
 import (
 	"context"
-	"go-developer-course-diploma/internal/app/service/auth/secure"
+	"go-developer-course-diploma/internal/service/auth/secure"
 	"net/http"
 )
 

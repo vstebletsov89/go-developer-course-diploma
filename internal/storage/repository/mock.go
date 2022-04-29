@@ -2,7 +2,7 @@ package repository
 
 import (
 	"github.com/stretchr/testify/mock"
-	"go-developer-course-diploma/internal/app/model"
+	model2 "go-developer-course-diploma/internal/model"
 )
 
 type MockUserRepository struct {
@@ -16,7 +16,7 @@ func NewMockRepository() *MockUserRepository {
 	return &MockUserRepository{inMemoryMockDB: make(map[string]string)}
 }
 
-func (m *MockUserRepository) RegisterUser(user *model.User) (int64, error) {
+func (m *MockUserRepository) RegisterUser(user *model2.User) (int64, error) {
 	_, exist := m.inMemoryMockDB[user.Login]
 	if exist {
 		return 0, ErrorUserAlreadyExist
@@ -25,12 +25,12 @@ func (m *MockUserRepository) RegisterUser(user *model.User) (int64, error) {
 	return 999, nil
 }
 
-func (m *MockUserRepository) GetUser(login string) (*model.User, error) {
+func (m *MockUserRepository) GetUser(login string) (*model2.User, error) {
 	pass, ok := m.inMemoryMockDB[login]
 	if !ok {
 		return nil, ErrorUserNotFound
 	}
-	return &model.User{Login: login, Password: pass}, nil
+	return &model2.User{Login: login, Password: pass}, nil
 }
 
 type MockOrderRepository struct {
@@ -43,16 +43,16 @@ func NewMockOrderRepository() *MockOrderRepository {
 	return &MockOrderRepository{}
 }
 
-func (m *MockOrderRepository) UploadOrder(order *model.Order) error {
+func (m *MockOrderRepository) UploadOrder(order *model2.Order) error {
 	// do nothing
 	return nil
 }
 
-func (m *MockOrderRepository) GetOrders(s int64) ([]*model.Order, error) {
-	var orders []*model.Order
-	orders = append(orders, &model.Order{Number: "10001", Status: "PROCESSED", Accrual: 0})
-	orders = append(orders, &model.Order{Number: "10002", Status: "PROCESSING", Accrual: 0})
-	orders = append(orders, &model.Order{Number: "10003", Status: "NEW", Accrual: 0})
+func (m *MockOrderRepository) GetOrders(s int64) ([]*model2.Order, error) {
+	var orders []*model2.Order
+	orders = append(orders, &model2.Order{Number: "10001", Status: "PROCESSED", Accrual: 0})
+	orders = append(orders, &model2.Order{Number: "10002", Status: "PROCESSING", Accrual: 0})
+	orders = append(orders, &model2.Order{Number: "10003", Status: "NEW", Accrual: 0})
 	return orders, nil
 }
 
@@ -60,7 +60,7 @@ func (m *MockOrderRepository) GetUserIDByOrderNumber(s string) (int64, error) {
 	return 999, ErrorOrderNotFound
 }
 
-func (m *MockOrderRepository) UpdateOrderStatus(order *model.Order) error {
+func (m *MockOrderRepository) UpdateOrderStatus(order *model2.Order) error {
 	// do nothing
 	return nil
 }
@@ -80,7 +80,7 @@ func NewMockTransactionRepository() *MockTransactionRepository {
 	return &MockTransactionRepository{}
 }
 
-func (m *MockTransactionRepository) ExecuteTransaction(transaction *model.Transaction) error {
+func (m *MockTransactionRepository) ExecuteTransaction(transaction *model2.Transaction) error {
 	// do nothing
 	return nil
 }
@@ -95,10 +95,10 @@ func (m *MockTransactionRepository) GetWithdrawnAmount(s int64) (float64, error)
 	return 3000.15, nil
 }
 
-func (m *MockTransactionRepository) GetWithdrawals(s int64) ([]*model.Transaction, error) {
-	var withdrawals []*model.Transaction
-	withdrawals = append(withdrawals, &model.Transaction{Order: "10001", Amount: 50.6})
-	withdrawals = append(withdrawals, &model.Transaction{Order: "10002", Amount: 789.45})
-	withdrawals = append(withdrawals, &model.Transaction{Order: "10003", Amount: 256.9812345})
+func (m *MockTransactionRepository) GetWithdrawals(s int64) ([]*model2.Transaction, error) {
+	var withdrawals []*model2.Transaction
+	withdrawals = append(withdrawals, &model2.Transaction{Order: "10001", Amount: 50.6})
+	withdrawals = append(withdrawals, &model2.Transaction{Order: "10002", Amount: 789.45})
+	withdrawals = append(withdrawals, &model2.Transaction{Order: "10003", Amount: 256.9812345})
 	return withdrawals, nil
 }

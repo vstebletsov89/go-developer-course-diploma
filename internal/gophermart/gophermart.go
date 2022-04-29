@@ -6,12 +6,12 @@ import (
 	"embed"
 	"github.com/pressly/goose/v3"
 	"github.com/sirupsen/logrus"
-	"go-developer-course-diploma/internal/app/accrual"
-	"go-developer-course-diploma/internal/app/configs"
-	"go-developer-course-diploma/internal/app/controller"
-	"go-developer-course-diploma/internal/app/server"
-	"go-developer-course-diploma/internal/app/service/auth"
-	"go-developer-course-diploma/internal/app/storage"
+	"go-developer-course-diploma/internal/accrual"
+	"go-developer-course-diploma/internal/configs"
+	"go-developer-course-diploma/internal/controller"
+	"go-developer-course-diploma/internal/server"
+	"go-developer-course-diploma/internal/service/auth"
+	storage2 "go-developer-course-diploma/internal/storage"
 	"net/http"
 	"time"
 )
@@ -48,9 +48,9 @@ func RunApp(cfg *configs.Config) error {
 		return err
 	}
 
-	userStore := storage.NewUserRepository(db)
-	orderStore := storage.NewOrderRepository(db)
-	transactionStore := storage.NewTransactionRepository(db)
+	userStore := storage2.NewUserRepository(db)
+	orderStore := storage2.NewOrderRepository(db)
+	transactionStore := storage2.NewTransactionRepository(db)
 	userAuthStore := auth.NewUserAuthorizationStore()
 	c := controller.NewController(cfg, logger, userStore, orderStore, transactionStore, userAuthStore)
 

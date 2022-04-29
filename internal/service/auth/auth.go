@@ -2,8 +2,8 @@ package auth
 
 import (
 	"github.com/google/uuid"
-	"go-developer-course-diploma/internal/app/service/auth/secure"
-	"go-developer-course-diploma/internal/app/storage/repository"
+	"go-developer-course-diploma/internal/service/auth/secure"
+	"go-developer-course-diploma/internal/storage/repository"
 	"net/http"
 	"sync"
 	"time"
