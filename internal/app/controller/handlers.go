@@ -101,13 +101,14 @@ func (c *Controller) RegisterHandler() http.HandlerFunc {
 			return
 		}
 
-		encryptedPassword, err := auth.EncryptPassword(user.Password)
+		encryptedPassword, err := auth.HashAndSalt(user.Password)
 		if err != nil {
 			c.Logger.Infof("EncryptPassword error: %s", err)
 			WriteError(w, http.StatusInternalServerError, err)
 			return
 		}
 		user.Password = encryptedPassword
+		c.Logger.Debugf("RegisterUser %+v\n\n", user)
 
 		userID, err := c.UserRepository.RegisterUser(user)
 		if errors.Is(err, repository.ErrorUserAlreadyExist) {
@@ -150,22 +151,23 @@ func (c *Controller) LoginHandler() http.HandlerFunc {
 			return
 		}
 
-		decryptedPassword, err := auth.DecryptPassword(userDB.Password)
+		c.Logger.Debugf("LoginHandler %+v\n\n", userDB)
+		ok, err := auth.IsUserAuthorized(user, userDB)
+		if !ok {
+			c.Logger.Infof("User unauthorized")
+			WriteResponse(w, http.StatusUnauthorized, "")
+			return
+		}
+
 		if err != nil {
-			c.Logger.Infof("DecryptPassword error: %s", err)
+			c.Logger.Infof("IsUserAuthorized error: %s", err)
 			WriteError(w, http.StatusInternalServerError, err)
 			return
 		}
 
-		if userDB.Login == user.Login && user.Password == decryptedPassword {
-			// debug userDB
-			c.Logger.Debugf("%+v\n\n", userDB)
-			c.UserAuthorizationStore.SetCookie(w, userDB.ID)
-			WriteResponse(w, http.StatusOK, "")
-			return
-		}
-
-		WriteResponse(w, http.StatusUnauthorized, "")
+		// set cookie for authorized user
+		c.UserAuthorizationStore.SetCookie(w, userDB.ID)
+		WriteResponse(w, http.StatusOK, "")
 	}
 }
 
