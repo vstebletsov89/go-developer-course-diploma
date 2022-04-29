@@ -11,7 +11,7 @@ import (
 	"go-developer-course-diploma/internal/controller"
 	"go-developer-course-diploma/internal/server"
 	"go-developer-course-diploma/internal/service/auth"
-	storage2 "go-developer-course-diploma/internal/storage"
+	"go-developer-course-diploma/internal/storage"
 	"net/http"
 	"time"
 )
@@ -48,9 +48,9 @@ func RunApp(cfg *configs.Config) error {
 		return err
 	}
 
-	userStore := storage2.NewUserRepository(db)
-	orderStore := storage2.NewOrderRepository(db)
-	transactionStore := storage2.NewTransactionRepository(db)
+	userStore := storage.NewUserRepository(db)
+	orderStore := storage.NewOrderRepository(db)
+	transactionStore := storage.NewTransactionRepository(db)
 	userAuthStore := auth.NewUserAuthorizationStore()
 	c := controller.NewController(cfg, logger, userStore, orderStore, transactionStore, userAuthStore)
 
