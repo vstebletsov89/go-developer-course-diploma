@@ -2,13 +2,10 @@ package accrual
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
 	"github.com/sirupsen/logrus"
 	"go-developer-course-diploma/internal/configs"
 	"go-developer-course-diploma/internal/model"
 	"go-developer-course-diploma/internal/storage/repository"
-	"net/http"
 	"time"
 )
 
@@ -21,72 +18,62 @@ const (
 )
 
 type Client struct {
-	Config                *configs.Config
-	Logger                *logrus.Logger
-	OrderRepository       repository.OrderRepository
-	TransactionRepository repository.TransactionRepository
+	accrualProvider       *Provider
+	logger                *logrus.Logger
+	orderRepository       repository.OrderRepository
+	transactionRepository repository.TransactionRepository
 }
 
 func NewAccrualClient(cfg *configs.Config, logger *logrus.Logger, orderStore repository.OrderRepository, transactionStore repository.TransactionRepository) *Client {
 	return &Client{
-		Config:                cfg,
-		Logger:                logger,
-		OrderRepository:       orderStore,
-		TransactionRepository: transactionStore,
+		accrualProvider:       NewAccrualProvider(cfg.AccrualSystemAddress),
+		logger:                logger,
+		orderRepository:       orderStore,
+		transactionRepository: transactionStore,
 	}
 }
 
 func (c *Client) UpdatePendingOrders(orders []string) error {
-	c.Logger.Debug("UpdatePendingOrders: start")
+	c.logger.Debug("UpdatePendingOrders: start")
 	for _, o := range orders {
-		link := fmt.Sprintf("%s/api/orders/%s", c.Config.AccrualSystemAddress, o)
-		req, err := http.NewRequest(http.MethodGet, link, nil)
-		if err != nil {
-			return err
-		}
 
-		resp, err := http.DefaultClient.Do(req)
+		order, err := c.accrualProvider.GetOrder(o)
 		if err != nil {
+			c.logger.Infof("GetOrder error: %s", err)
 			return err
 		}
-
-		var order *model.Order
-		if err := json.NewDecoder(resp.Body).Decode(&order); err != nil {
-			return err
-		}
-		defer resp.Body.Close()
 
 		if order.Status == Processed {
 			// set order.Number because response from accrual has 'order' field instead of 'number'
 			order.Number = o
-			c.Logger.Debugf("Updated order '%s' status '%s' accrual '%f' : \n", order.Number, order.Status, order.Accrual)
+			c.logger.Debugf("Updated order '%s' status '%s' accrual '%f' : \n", order.Number, order.Status, order.Accrual)
 
-			if err := c.OrderRepository.UpdateOrderStatus(order); err != nil {
-				c.Logger.Infof("UpdateOrderStatus error: %s", err)
+			if err := c.orderRepository.UpdateOrderStatus(order); err != nil {
+				c.logger.Infof("UpdateOrderStatus error: %s", err)
 				return err
 			}
 
 			// get current user and accumulate balance
-			userID, err := c.OrderRepository.GetUserIDByOrderNumber(order.Number)
+			userID, err := c.orderRepository.GetUserIDByOrderNumber(order.Number)
 			if err != nil {
-				c.Logger.Infof("GetUserIDByOrderNumber error: %s", err)
+				c.logger.Infof("GetUserIDByOrderNumber error: %s", err)
 				return err
 			}
 
-			c.Logger.Debugf("GetUserIDByOrderNumber userID '%d'", userID)
+			c.logger.Debugf("GetUserIDByOrderNumber userID '%d'", userID)
 
 			transaction := &model.Transaction{UserID: userID, Order: order.Number, Amount: order.Accrual}
 
-			c.Logger.Debugf("%+v\n", transaction)
+			c.logger.Debugf("%+v\n", transaction)
 
-			if err := c.TransactionRepository.ExecuteTransaction(transaction); err != nil {
-				c.Logger.Infof("ExecuteTransaction error: %s", err)
+			if err := c.transactionRepository.ExecuteTransaction(transaction); err != nil {
+				c.logger.Infof("ExecuteTransaction error: %s", err)
 				return err
 			}
 		}
 	}
 
-	c.Logger.Debug("UpdatePendingOrders: end")
+	c.logger.Debug("UpdatePendingOrders: end")
 	return nil
 }
 
@@ -100,16 +87,16 @@ func (c *Client) CheckPendingOrders(ctx context.Context) {
 
 		// check pending orders each second
 		case <-time.After(pollingTimeout):
-			c.Logger.Debug("Check pending orders")
-			orders, err := c.OrderRepository.GetPendingOrders()
+			c.logger.Debug("Check pending orders")
+			orders, err := c.orderRepository.GetPendingOrders()
 			if err != nil {
-				c.Logger.Debugf("GetPendingOrders error: %s", err)
+				c.logger.Debugf("GetPendingOrders error: %s", err)
 			}
 			if len(orders) > 0 {
-				c.Logger.Debug("Update pending orders")
+				c.logger.Debug("Update pending orders")
 				err := c.UpdatePendingOrders(orders)
 				if err != nil {
-					c.Logger.Debugf("UpdatePendingOrders error: %s", err)
+					c.logger.Debugf("UpdatePendingOrders error: %s", err)
 				}
 			}
 		}
