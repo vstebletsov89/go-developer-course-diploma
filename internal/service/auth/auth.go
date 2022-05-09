@@ -32,14 +32,25 @@ func NewUserAuthorizationStore() *UserAuthorizationStore {
 
 var _ secure.UserAuthorization = (*UserAuthorizationStore)(nil)
 
-func (s *UserAuthorizationStore) SetCookie(w http.ResponseWriter, userID int64) {
-	sessionID := uuid.NewString()
+func (s *UserAuthorizationStore) storeAuthorization(sessionID string, userID int64) {
 	s.mu.Lock()
 	s.sessions[sessionID] = Session{
 		UserID:    userID,
 		ExpiredAt: time.Now().Add(time.Hour * 24),
 	}
 	s.mu.Unlock()
+}
+
+func (s *UserAuthorizationStore) loadAuthorization(sessionID string) (Session, bool) {
+	s.mu.RLock()
+	session, ok := s.sessions[sessionID]
+	s.mu.RUnlock()
+	return session, ok
+}
+
+func (s *UserAuthorizationStore) SetCookie(w http.ResponseWriter, userID int64) {
+	sessionID := uuid.NewString()
+	s.storeAuthorization(sessionID, userID)
 
 	cookie := &http.Cookie{
 		Name:  cookieName,
@@ -53,7 +64,8 @@ func (s *UserAuthorizationStore) IsValidAuthorization(r *http.Request) bool {
 	if err != nil {
 		return false
 	}
-	if s.sessions[cookie.Value].ExpiredAt.Before(time.Now()) {
+	session, ok := s.loadAuthorization(cookie.Value)
+	if !ok || session.ExpiredAt.Before(time.Now()) {
 		return false
 	}
 	return true
@@ -65,7 +77,9 @@ func (s *UserAuthorizationStore) GetUserID(r *http.Request) (int64, error) {
 		if err != nil {
 			return 0, err
 		}
-		return s.sessions[cookie.Value].UserID, nil
+		// if authorization is valid then session exists
+		session, _ := s.loadAuthorization(cookie.Value)
+		return session.UserID, nil
 	}
 	return 0, repository.ErrorUnauthorized
 }
